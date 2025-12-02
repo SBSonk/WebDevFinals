@@ -13,55 +13,38 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        $inventory = Inventory::all();
-        return view('inventory.index', ['inventory' => $inventory]);
+        // Eager load product to avoid N+1 queries
+        $inventory = Inventory::with('product')->get();
+        return view('inventory.index', compact('inventory'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Show the form for editing a specific inventory record.
      */
-    public function create()
+    public function edit($id)
     {
-        //
+        $inventory = Inventory::findOrFail($id);
+        $products = Product::all();
+        return view('inventory.edit', compact('inventory', 'products'));
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Update a specific inventory record.
      */
-    public function store(Request $request)
+    public function update(Request $request, $id)
     {
-        //
-    }
+        $inventory = Inventory::findOrFail($id);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,product_id|unique:inventory,product_id,' . $id . ',inventory_id',
+            'stock_quantity' => 'required|integer|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'max_stock_level' => 'required|integer|min:0',
+            'last_restocked' => 'required|date',
+        ]);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        $inventory->update($validated);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return redirect()->route('inventory.index')->with('success', 'Inventory updated successfully!');
     }
 }

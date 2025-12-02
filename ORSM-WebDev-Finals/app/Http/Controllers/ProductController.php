@@ -69,8 +69,13 @@ class ProductController extends Controller
     public function show($id)
     {
         $product = Product::with('category', 'supplier', 'inventory')->findOrFail($id);
-        return view('products.show', compact('product'));
+
+        // Read fromInventory from query string, default to 0
+        $fromInventory = request()->query('fromInventory', 0);
+
+        return view('products.show', compact('product', 'fromInventory'));
     }
+
 
 
     /**

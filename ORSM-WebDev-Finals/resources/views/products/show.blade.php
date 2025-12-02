@@ -71,8 +71,9 @@
                 Edit Product
             </a>
 
+            
             <a 
-                href="{{ route('products.index') }}"
+                href="{{ $fromInventory ? route('inventory.index') : route('products.index') }}"
                 class="bg-gray-300 text-black px-4 py-2 rounded"
             >
                 Back to List

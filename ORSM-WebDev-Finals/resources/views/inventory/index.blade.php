@@ -3,11 +3,8 @@
 @section('title', 'Inventory')
 
 @section('content')
-<h1 class="text-2xl font-bold mb-4">Inventory</h1>
 
-<a href="{{ route('products.create') }}" class="bg-blue-500 text-white px-4 py-2 rounded mb-4 inline-block">
-    Add Product
-</a>
+<h1 class="text-2xl font-bold mb-4">Inventory</h1>
 
 <table class="min-w-full bg-white shadow rounded">
     <thead>
@@ -23,22 +20,17 @@
     </thead>
     <tbody>
         @foreach ($inventory as $item)
-        <tr class="border-t">
+        <tr class="border-t {{ $item->stock_quantity <= $item->reorder_level ? 'bg-red-100 text-red-700' : '' }}">
             <td class="px-4 py-2">{{ $item->inventory_id }}</td>
             <td class="px-4 py-2">
-                {{ $item->product_id }} | <a href="{{ route('products.show', $item->product_id) }}" class="text-blue-500">{{ $item->product->product_name }}</a>
+                {{ $item->product_id }} | <a href="{{ route('products.show', ['product' => $item->product_id, 'fromInventory' => 1]) }}" class="text-blue-500">{{ $item->product->product_name }}</a>
             </td>
             <td class="px-4 py-2">{{ $item->stock_quantity }}</td>
             <td class="px-4 py-2">{{ $item->reorder_level }}</td>
             <td class="px-4 py-2">{{ $item->max_stock_level }}</td>
-            <td class="px-4 py-2">{{ $item->last_restocked }}</td>
+            <td class="px-4 py-2">{{ $item->last_restocked->format('m-d-y') }}</td>
             <td class="px-4 py-2">
-                <a href="{{ route('products.edit', $item->product_id) }}" class="text-blue-500">Edit</a>
-                <form action="{{ route('products.destroy', $item->product_id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this product?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-red-500">Delete</button>
-                </form>
+                <a href="{{ route('inventory.edit', $item->inventory_id) }}" class="text-blue-500">Edit</a>
             </td>
         </tr>
         @endforeach

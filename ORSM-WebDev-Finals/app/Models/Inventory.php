@@ -19,6 +19,10 @@ class Inventory extends Model
         'last_restocked'
     ];
 
+    protected $casts = [
+        'last_restocked' => 'datetime',
+    ];
+
     // Inventory belongs to a product
     public function product()
     {
