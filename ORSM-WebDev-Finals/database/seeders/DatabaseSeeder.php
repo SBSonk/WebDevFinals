@@ -10,6 +10,8 @@ use App\Models\Category;
 use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\Inventory;
+use App\Models\InventoryTransaction;
+use App\Models\InventoryTransactionItem;
 
 class DatabaseSeeder extends Seeder
 {
@@ -40,6 +42,15 @@ class DatabaseSeeder extends Seeder
     Product::all()->each(function ($product) {
         Inventory::factory()->create(['product_id' => $product->product_id]);
     });
+
+    InventoryTransaction::factory()
+    ->count(20)
+    ->has(
+        InventoryTransactionItem::factory()->count(3),
+        'items'
+    )
+    ->create();
+
 
     }
 }
