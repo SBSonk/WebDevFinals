@@ -1,36 +1,27 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@yield('title', 'Inventory System')</title>
+    @vite('resources/css/app.css') {{-- Tailwind CSS --}}
+</head>
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+<body class="bg-gray-100">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    {{-- NAVBAR (appears on every page) --}}
+    <nav class="bg-gray-800 text-white px-6 py-3 shadow">
+        <ul class="flex space-x-6">
+            <li><a href="{{ route('products.index') }}" class="hover:text-gray-300">Products</a></li>
+            <li><a href="{{ route('inventory.index') }}" class="hover:text-gray-300">Inventory</a></li>
+            {{-- <li><a href="{{ route('categories.index') }}" class="hover:text-gray-300">Categories</a></li>
+            <li><a href="{{ route('suppliers.index') }}" class="hover:text-gray-300">Suppliers</a></li> --}}
+        </ul>
+    </nav>
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            @include('layouts.navigation')
+    {{-- MAIN CONTENT --}}
+    <main class="p-6">
+        @yield('content')
+    </main>
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
-
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
-        </div>
-    </body>
+</body>
 </html>

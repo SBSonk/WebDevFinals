@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('phone', 20);
             $table->text('address');
             $table->boolean('is_active')->default(true);
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
         });
     }
 
