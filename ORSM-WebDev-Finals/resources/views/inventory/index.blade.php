@@ -4,13 +4,13 @@
 
 @section('content')
 
-<h1 class="text-2xl font-bold mb-4">Inventory</h1>
+<h1 class="mb-4 text-2xl font-bold">Inventory</h1>
 
-<table class="min-w-full bg-white shadow rounded">
+<table class="min-w-full bg-white rounded shadow">
     <thead>
         <tr class="bg-gray-200">
             <th class="px-4 py-2">ID</th>
-            <th class="px-4 py-2">Product ID | Name</th>
+            <th class="px-4 py-2">Product Name</th>
             <th class="px-4 py-2">Stock Quantity</th>
             <th class="px-4 py-2">Reorder Level</th>
             <th class="px-4 py-2">Max Stock Level</th>
@@ -23,7 +23,7 @@
         <tr class="border-t {{ $item->stock_quantity <= $item->reorder_level ? 'bg-red-100 text-red-700' : '' }}">
             <td class="px-4 py-2">{{ $item->inventory_id }}</td>
             <td class="px-4 py-2">
-                {{ $item->product_id }} | <a href="{{ route('products.show', ['product' => $item->product_id, 'fromInventory' => 1]) }}" class="text-blue-500">{{ $item->product->product_name }}</a>
+                <a href="{{ route('products.show', ['product' => $item->product_id, 'fromInventory' => 1]) }}" class="text-blue-500">{{ $item->product->product_name }}</a>
             </td>
             <td class="px-4 py-2">{{ $item->stock_quantity }}</td>
             <td class="px-4 py-2">{{ $item->reorder_level }}</td>

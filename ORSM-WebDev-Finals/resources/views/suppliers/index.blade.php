@@ -17,6 +17,7 @@
             <th class="px-4 py-2">Supplier Name</th>
             <th class="px-4 py-2">Contact Person</th>
             <th class="px-4 py-2">Email</th>
+            <th class="px-4 py-2">Contact No.</th>
             <th class="px-4 py-2">Address</th>
             <th class="px-4 py-2">Actions</th>
         </tr>
@@ -26,12 +27,12 @@
         <tr class="border-t {{ !$supplier->is_active ? 'bg-red-100 text-red-700' : '' }}">
             <td class="px-4 py-2">{{ $supplier->supplier_id }}</td>
             <td class="px-4 py-2">
-                <a href="{{ route('suppliers.show', $supplier) }}" class="text-blue-500">{{ $supplier->supplier_name }}</a>
+                {{ $supplier->supplier_name }}
             </td>
             <td class="px-4 py-2">{{ $supplier->contact_person }}</td>
             <td class="px-4 py-2">{{ $supplier->email }}</td>
             <td class="px-4 py-2">{{ $supplier->phone }}</td>
-            <td class="px-4 py-2">{{ $supplier->Address }}</td>
+            <td class="px-4 py-2">{{ $supplier->address }}</td>
             <td class="px-4 py-2">
                 <a href="{{ route('suppliers.edit', $supplier->supplier_id) }}" class="text-blue-500">Edit</a>
             

@@ -26,14 +26,19 @@
         {{-- Category --}}
         <div class="mb-4">
             <h3 class="font-semibold">Category</h3>
-            <p>{{ $product->category->category_name }}</p>
+            <p class="{{ $product->category ? '' : 'text-red-600 font-semibold' }}">
+                {{ $product->category->category_name ?? 'Deleted Category' }}
+            </p>
         </div>
 
         {{-- Supplier --}}
         <div class="mb-4">
             <h3 class="font-semibold">Supplier</h3>
-            <p>{{ $product->supplier->supplier_name }}</p>
+            <p class="{{ $product->supplier ? '' : 'text-red-600 font-semibold' }}">
+                {{ $product->supplier->supplier_name ?? 'Deleted Supplier' }}
+            </p>
         </div>
+
 
         {{-- Pricing --}}
         <div class="mb-4">
