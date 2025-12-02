@@ -1,8 +1,10 @@
 @extends('layouts.app')
 
+@section('title', 'Add Product')
+
 @section('content')
-<div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Add Product</h1>
+<div class="container p-4 mx-auto">
+    <h1 class="mb-4 text-2xl font-bold">Add Product</h1>
 
     <form action="{{ route('products.store') }}" method="POST">
         @csrf
@@ -12,7 +14,7 @@
             <input 
                 type="text" 
                 name="product_name" 
-                class="border p-2 w-full" 
+                class="w-full p-2 border" 
                 placeholder="Enter product name"
                 required
             >
@@ -22,7 +24,7 @@
             <label class="block mb-1">Description</label>
             <textarea 
                 name="description" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 placeholder="Enter product description"
             ></textarea>
         </div>
@@ -31,7 +33,7 @@
             <label class="block mb-1">Category</label>
             <select 
                 name="category_id" 
-                class="border p-2 w-full" 
+                class="w-full p-2 border" 
                 required
             >
                 <option value="" disabled selected>Select a category</option>
@@ -47,7 +49,7 @@
             <label class="block mb-1">Supplier</label>
             <select 
                 name="supplier_id" 
-                class="border p-2 w-full" 
+                class="w-full p-2 border" 
                 required
             >
                 <option value="" disabled selected>Select a supplier</option>
@@ -65,7 +67,7 @@
                 type="number" 
                 step="0.01" 
                 name="unit_price" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 placeholder="0.00"
                 required
             >
@@ -77,7 +79,7 @@
                 type="number" 
                 step="0.01" 
                 name="cost_price" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 placeholder="0.00"
                 required
             >
@@ -85,7 +87,7 @@
 
         <button 
             type="submit" 
-            class="bg-blue-500 text-white px-4 py-2 rounded"
+            class="px-4 py-2 text-white bg-blue-500 rounded"
         >
             Save
         </button>

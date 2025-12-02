@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
-use App\Models\Product;
 use App\Models\Supplier;
-use App\Models\Inventory;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the suppliers.
      */
     public function index()
     {
@@ -20,110 +17,89 @@ class SupplierController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Show the form for creating a new supplier.
      */
     public function create()
     {
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-
-        return view('products.create', compact('categories', 'suppliers'));
+        return view('suppliers.create');
     }
 
-
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created supplier in storage.
      */
     public function store(Request $request)
     {
-        // Validate input
         $validated = $request->validate([
-            'product_name' => 'required|string|max:200',
-            'description' => 'nullable|string',
-            'category_id' => 'required|exists:categories,category_id',
-            'supplier_id' => 'required|exists:suppliers,supplier_id',
-            'unit_price' => 'required|numeric|min:0',
-            'cost_price' => 'required|numeric|min:0',
+            'supplier_name' => 'required|string|max:100',
+            'contact_person' => 'required|string|max:100',
+            'email' => 'required|email|max:100|unique:suppliers,email',
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        // Create product
-        $product = Product::create($validated);
+        // If checkbox is not checked, set is_active to false
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
 
-        // Automatically create empty inventory row
-        Inventory::create([
-            'product_id' => $product->product_id,
-            'stock_quantity' => 0,
-            'reorder_level' => 10,
-            'max_stock_level' => 100,
-            'last_restocked' => now()
-        ]);
+        Supplier::create($validated);
 
         return redirect()
-            ->route('products.index')
-            ->with('success', 'Product created successfully!');
+            ->route('suppliers.index')
+            ->with('success', 'Supplier created successfully!');
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show($id)
-    {
-        $product = Product::with('category', 'supplier', 'inventory')->findOrFail($id);
-
-        // Read fromInventory from query string, default to 0
-        $fromInventory = request()->query('fromInventory', 0);
-
-        return view('products.show', compact('product', 'fromInventory'));
-    }
-
-
-
-    /**
-     * Show the form for editing the specified resource.
+     * Show the form for editing the specified supplier.
      */
     public function edit($id)
     {
-        $product = Product::findOrFail($id);
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-
-        return view('products.edit', compact('product', 'categories', 'suppliers'));
+        $supplier = Supplier::findOrFail($id);
+        return view('suppliers.edit', compact('supplier'));
     }
 
-
     /**
-     * Update the specified resource in storage.
+     * Update the specified supplier in storage.
      */
     public function update(Request $request, $id)
     {
+        $supplier = Supplier::findOrFail($id);
+
         $validated = $request->validate([
-            'product_name' => 'required|string|max:200',
-            'description' => 'nullable|string',
-            'category_id' => 'required|exists:categories,category_id',
-            'supplier_id' => 'required|exists:suppliers,supplier_id',
-            'unit_price' => 'required|numeric|min:0',
-            'cost_price' => 'required|numeric|min:0',
-            'is_active' => 'required|boolean',
+            'supplier_name' => 'required|string|max:100',
+            'contact_person' => 'required|string|max:100',
+            'email' => 'required|email|max:100|unique:suppliers,email,' . $supplier->supplier_id . ',supplier_id',
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        $product = Product::findOrFail($id);
-        $product->update($validated);
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        $supplier->update($validated);
 
         return redirect()
-            ->route('products.index')
-            ->with('success', 'Product updated successfully!');
+            ->route('suppliers.index')
+            ->with('success', 'Supplier updated successfully!');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified supplier from storage.
      */
     public function destroy($id)
     {
         $supplier = Supplier::findOrFail($id);
+
+        // Optional: prevent deleting supplier if products exist
+        if ($supplier->products()->count() > 0) {
+            return redirect()
+                ->route('suppliers.index')
+                ->with('error', 'Cannot delete supplier with associated products.');
+        }
+
         $supplier->delete();
 
         return redirect()
             ->route('suppliers.index')
-            ->with('success', 'Product deleted successfully!');
+            ->with('success', 'Supplier deleted successfully!');
     }
 }

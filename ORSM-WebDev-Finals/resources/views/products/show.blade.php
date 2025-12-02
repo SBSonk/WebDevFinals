@@ -1,11 +1,13 @@
 @extends('layouts.app')
 
+@section('title', 'View Product | {{ $product->product_name }}')
+
 @section('content')
-<div class="container mx-auto p-6">
+<div class="container p-6 mx-auto">
 
-    <h1 class="text-3xl font-bold mb-6">Product Details</h1>
+    <h1 class="mb-6 text-3xl font-bold">Product Details</h1>
 
-    <div class="bg-white shadow rounded p-6">
+    <div class="p-6 bg-white rounded shadow">
         
         {{-- Product Name --}}
         <div class="mb-4">
@@ -58,15 +60,15 @@
                 <p>Max Stock Level: {{ $product->inventory->max_stock_level }}</p>
                 <p>Last Restocked: {{ $product->inventory->last_restocked }}</p>
             @else
-                <p class="text-gray-500 italic">No inventory record found.</p>
+                <p class="italic text-gray-500">No inventory record found.</p>
             @endif
         </div>
 
         {{-- Buttons --}}
-        <div class="mt-6 flex gap-4">
+        <div class="flex gap-4 mt-6">
             <a 
                 href="{{ route('products.edit', $product->product_id) }}"
-                class="bg-blue-500 text-white px-4 py-2 rounded"
+                class="px-4 py-2 text-white bg-blue-500 rounded"
             >
                 Edit Product
             </a>
@@ -74,7 +76,7 @@
             
             <a 
                 href="{{ $fromInventory ? route('inventory.index') : route('products.index') }}"
-                class="bg-gray-300 text-black px-4 py-2 rounded"
+                class="px-4 py-2 text-black bg-gray-300 rounded"
             >
                 Back to List
             </a>

@@ -1,8 +1,10 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Product')
+
 @section('content')
-<div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Edit Product</h1>
+<div class="container p-4 mx-auto">
+    <h1 class="mb-4 text-2xl font-bold">Edit Product</h1>
 
     <form action="{{ route('products.update', $product->product_id) }}" method="POST">
         @csrf
@@ -13,7 +15,7 @@
             <input 
                 type="text" 
                 name="product_name" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 value="{{ old('product_name', $product->product_name) }}"
                 required
             >
@@ -23,7 +25,7 @@
             <label class="block mb-1">Description</label>
             <textarea 
                 name="description" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 placeholder="Enter product description"
             >{{ old('description', $product->description) }}</textarea>
         </div>
@@ -32,7 +34,7 @@
             <label class="block mb-1">Category</label>
             <select 
                 name="category_id" 
-                class="border p-2 w-full" 
+                class="w-full p-2 border" 
                 required
             >
                 @foreach($categories as $category)
@@ -50,7 +52,7 @@
             <label class="block mb-1">Supplier</label>
             <select 
                 name="supplier_id" 
-                class="border p-2 w-full" 
+                class="w-full p-2 border" 
                 required
             >
                 @foreach($suppliers as $supplier)
@@ -70,7 +72,7 @@
                 type="number" 
                 step="0.01" 
                 name="unit_price" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 value="{{ old('unit_price', $product->unit_price) }}"
                 required
             >
@@ -82,13 +84,13 @@
                 type="number" 
                 step="0.01" 
                 name="cost_price" 
-                class="border p-2 w-full"
+                class="w-full p-2 border"
                 value="{{ old('cost_price', $product->cost_price) }}"
                 required
             >
         </div>
 
-        <div class="mb-4 flex items-center gap-2">
+        <div class="flex items-center gap-2 mb-4">
             <label class="block mb-1">Active:</label>
 
             {{-- Hidden field ensures 0 is sent if checkbox is unchecked --}}
@@ -104,7 +106,7 @@
 
         <button 
             type="submit" 
-            class="bg-blue-500 text-white px-4 py-2 rounded"
+            class="px-4 py-2 text-white bg-blue-500 rounded"
         >
             Update
         </button>
