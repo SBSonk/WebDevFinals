@@ -15,6 +15,7 @@
             <li><a href="{{ route('inventory.index') }}" class="hover:text-gray-300">Inventory</a></li>
             <li><a href="{{ route('categories.index') }}" class="hover:text-gray-300">Categories</a></li>
             <li><a href="{{ route('suppliers.index') }}" class="hover:text-gray-300">Suppliers</a></li>
+            <li><a href="{{ route('inventory_transactions.index') }}" class="hover:text-gray-300">Transactions</a></li>
         </ul>
     </nav>
 
