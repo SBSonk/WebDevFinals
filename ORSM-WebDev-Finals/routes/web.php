@@ -17,4 +17,17 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+// Example role-protected routes (uses the 'role' middleware alias registered in AppServiceProvider)
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin', function () {
+        return view('admin.dashboard');
+    })->name('admin.dashboard');
+});
+
+Route::middleware(['auth', 'role:staff,admin'])->group(function () {
+    Route::get('/staff', function () {
+        return view('staff.dashboard');
+    })->name('staff.dashboard');
+});
+
+require __DIR__ . '/auth.php';
