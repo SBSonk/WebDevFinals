@@ -22,11 +22,9 @@
             <li>
                 <a href="{{ route('cart.index') }}" class="hover:text-gray-300">Cart</a>
             </li>
-            @auth
             <li>
                 <a href="{{ route('orders.index') }}" class="hover:text-gray-300">My Orders</a>
             </li>
-            @endauth
         </ul>
     </nav>
 
