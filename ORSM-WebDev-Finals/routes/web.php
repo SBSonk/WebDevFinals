@@ -22,6 +22,7 @@ require __DIR__ . '/products_inventory_management.php';
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ReportsController;
 
 // Store & Cart
 Route::get('/store', [CartController::class, 'storeView'])->name('store');
@@ -40,3 +41,12 @@ Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
 Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
 // });
+
+// Admin reporting routes (sales dashboard, CSV/PDF export)
+Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('/sales', [ReportsController::class, 'index'])->name('admin.sales');
+    Route::get('/sales/export/csv', [ReportsController::class, 'exportCsv'])->name('admin.sales.export.csv');
+    Route::get('/sales/export/pdf', [ReportsController::class, 'exportPdf'])->name('admin.sales.export.pdf');
+    Route::get('/sales/export/check/{batch}', [ReportsController::class, 'exportCheck'])->name('admin.sales.export.check');
+    Route::get('/sales/export/download/{batch}', [ReportsController::class, 'exportDownload'])->name('admin.sales.export.download');
+});
