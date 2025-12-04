@@ -32,6 +32,10 @@
     <main class="p-6">
         @yield('content')
     </main>
+    </main>
 
-</body>
+        {{-- allow pages to push scripts into this stack (e.g. Chart.js) --}}
+        @stack('scripts')
+
+    </body>
 </html>
