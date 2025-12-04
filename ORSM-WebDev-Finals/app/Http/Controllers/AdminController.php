@@ -49,7 +49,7 @@ class AdminController extends Controller
         }
 
         $recent_activities = ActivityLog::recent(10)->with('user')->get();
-        
+
         $recent_orders = [];
         try {
             if (class_exists('\App\Models\Order') && Schema::hasTable('orders')) {
@@ -60,7 +60,7 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             // Silent fail - Order model/table not ready yet
         }
-        
+
         // Low stock alerts (assuming inventory table exists)
         $low_stock_alerts = [];
 
@@ -89,6 +89,49 @@ class AdminController extends Controller
         $users = $query->paginate(15);
 
         return view('admin.users.index', compact('users'));
+    }
+
+    /**
+     * Show account changes / activity logs (admin only)
+     */
+    public function activity(Request $request)
+    {
+        // Filters
+        $action = $request->input('action');
+        $userId = $request->input('user_id');
+        $start = $request->filled('start') ? \Carbon\Carbon::parse($request->input('start'))->startOfDay() : null;
+        $end = $request->filled('end') ? \Carbon\Carbon::parse($request->input('end'))->endOfDay() : null;
+
+        $query = \App\Models\ActivityLog::with('user')->latest('created_at');
+
+        if ($action) {
+            $query->where('action', $action);
+        }
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+        if ($start && $end) {
+            $query->whereBetween('created_at', [$start, $end]);
+        } elseif ($start) {
+            $query->where('created_at', '>=', $start);
+        } elseif ($end) {
+            $query->where('created_at', '<=', $end);
+        }
+
+        $logs = $query->paginate(20)->withQueryString();
+
+        $users = User::orderBy('name')->get(['id','name','email']);
+
+        return view('admin.activity.index', [
+            'logs' => $logs,
+            'users' => $users,
+            'filters' => [
+                'action' => $action,
+                'user_id' => $userId,
+                'start' => $request->input('start'),
+                'end' => $request->input('end'),
+            ],
+        ]);
     }
 
     /**
@@ -249,7 +292,7 @@ class AdminController extends Controller
 
         foreach ($validated as $key => $value) {
             $oldValue = SystemSettings::get($key);
-            
+
             if ($oldValue !== $value) {
                 SystemSettings::set($key, $value);
                 ActivityLogger::logSettingsChanged($key, $oldValue, $value);
@@ -329,7 +372,7 @@ class AdminController extends Controller
         $logs = $query->with('user')->latest('created_at')->get();
 
         $csv = "ID,User,Action,Subject Type,Subject ID,IP Address,Created At\n";
-        
+
         foreach ($logs as $log) {
             $csv .= sprintf(
                 "%d,%s,%s,%s,%s,%s,%s\n",

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use App\Services\ActivityLogger;
 
 class NewPasswordController extends Controller
 {
@@ -48,6 +49,11 @@ class NewPasswordController extends Controller
                 ])->save();
 
                 event(new PasswordReset($user));
+
+                // Audit log for password reset (non-interactive via email token)
+                ActivityLogger::log('password_reset', 'User', $user->id, [
+                    'password' => 'reset',
+                ]);
             }
         );
 

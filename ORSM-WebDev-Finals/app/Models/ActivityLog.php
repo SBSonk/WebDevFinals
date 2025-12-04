@@ -50,6 +50,13 @@ class ActivityLog extends Model
             'restore' => 'Restored',
             'deactivate' => 'Deactivated',
             'activate' => 'Activated',
+            'password_changed' => 'Password Changed',
+            'password_reset' => 'Password Reset',
+            // Account lifecycle
+            'account_created' => 'Account Created',
+            'name_changed' => 'Name Changed',
+            'email_changed' => 'Email Changed',
+            'account_deleted' => 'Account Deleted',
         ];
 
         return $descriptions[$this->action] ?? ucfirst($this->action);

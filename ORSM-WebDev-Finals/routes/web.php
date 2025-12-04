@@ -57,6 +57,10 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->pref
     Route::get('/sales/export/check/{batch}', [ReportsController::class, 'exportCheck'])->name('admin.sales.export.check');
     Route::get('/sales/export/download/{batch}', [ReportsController::class, 'exportDownload'])->name('admin.sales.export.download');
 
+    // Admin activity / account changes
+    Route::get('/activity', [\App\Http\Controllers\AdminController::class, 'activity'])
+        ->name('admin.activity');
+
     // Payment simulation routes
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
     Route::post('/payments/{orderId}/simulate-cod', [PaymentController::class, 'simulateCod'])->name('admin.payments.simulate-cod');

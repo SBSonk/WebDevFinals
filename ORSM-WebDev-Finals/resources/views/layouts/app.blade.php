@@ -32,10 +32,13 @@
                         <li><a href="{{ route('inventory_transactions.index') }}" class="hover:text-gray-300">Inventory Movements</a></li>
                     @endif
 
-                    {{-- Admin quick link --}}
+                    {{-- Admin quick links --}}
                     @if(method_exists($user, 'isAdmin') && $user->isAdmin())
                         <li class="pl-6 ml-2 border-l border-gray-700">
                             <a href="{{ route('admin.sales') }}" class="hover:text-gray-300">Sales Dashboard</a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.activity') }}" class="hover:text-gray-300">Account Changes</a>
                         </li>
                     @endif
                 @endauth
