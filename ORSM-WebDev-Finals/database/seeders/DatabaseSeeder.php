@@ -36,17 +36,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'customer@example.com',
         ]);
 
-        // Create 5 categories
-        Category::factory(5)->create();
-
         // Create 5 suppliers
         Supplier::factory(5)->create();
 
-        // Create 20 products
-        Product::factory(20)->create();
-
         //Create 20 orders
-        Order::factory(20)->create();
+        Order::factory(5)->create();
 
         // Create inventory records for all products
         Product::all()->each(function ($product) {
@@ -54,7 +48,7 @@ class DatabaseSeeder extends Seeder
         });
 
         InventoryTransaction::factory()
-            ->count(20)
+            ->count(5)
             ->has(
                 InventoryTransactionItem::factory()->count(3),
                 'items'
