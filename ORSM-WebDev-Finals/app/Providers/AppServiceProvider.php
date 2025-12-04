@@ -22,5 +22,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register role middleware alias so routes can use `role:admin` without editing Kernel.
         $this->app->make(Router::class)->aliasMiddleware('role', \App\Http\Middleware\RoleMiddleware::class);
+
+        // Alias to restrict admin checkout in production
+        $this->app->make(Router::class)->aliasMiddleware('restrict_admin_checkout', \App\Http\Middleware\RestrictAdminCheckout::class);
     }
 }

@@ -1,11 +1,15 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('home');
 });
 
 Route::get('/dashboard', function () {
@@ -18,88 +22,35 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Admin Routes
-Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
-    // Admin Dashboard
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-
-    // User Management
-    Route::prefix('users')->name('users.')->group(function () {
-        Route::get('/', [AdminController::class, 'listUsers'])->name('index');
-        Route::get('/create', [AdminController::class, 'createUser'])->name('create');
-        Route::post('/', [AdminController::class, 'storeUser'])->name('store');
-        Route::get('/{user}/edit', [AdminController::class, 'editUser'])->name('edit');
-        Route::patch('/{user}', [AdminController::class, 'updateUser'])->name('update');
-        Route::post('/{user}/deactivate', [AdminController::class, 'deactivateUser'])->name('deactivate');
-        Route::post('/{user}/activate', [AdminController::class, 'activateUser'])->name('activate');
-        Route::delete('/{user}', [AdminController::class, 'deleteUser'])->name('delete');
-    });
-
-    // System Settings
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/', [AdminController::class, 'editSettings'])->name('edit');
-        Route::patch('/', [AdminController::class, 'updateSettings'])->name('update');
-    });
-
-    // Activity Logs
-    Route::prefix('logs')->name('logs.')->group(function () {
-        Route::get('/', [AdminController::class, 'activityLogs'])->name('index');
-        Route::get('/{log}', [AdminController::class, 'viewLogDetails'])->name('show');
-        Route::get('/export/csv', [AdminController::class, 'exportLogs'])->name('export');
-    });
-});
-
+// Auth & module routes
 require __DIR__.'/auth.php';
 require __DIR__.'/products_inventory_management.php';
 
-// Example role-protected routes (uses the 'role' middleware alias registered in AppServiceProvider)
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
-});
-
-Route::middleware(['auth', 'role:staff,admin'])->group(function () {
-    Route::get('/staff', function () {
-        return view('staff.dashboard');
-    })->name('staff.dashboard');
-});
-
-require __DIR__ . '/auth.php';
-require __DIR__.'/products_inventory_management.php';
-
-
-
-require __DIR__ . '/auth.php';
-require __DIR__ . '/products_inventory_management.php';
-
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\PaymentController;
-
-// Store & Cart
+// Store & Cart (public)
 Route::get('/store', [CartController::class, 'storeView'])->name('store');
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
 
-// Checkout & Orders (temporarily no auth requirement - user permissions TBD)
-use App\Http\Controllers\CheckoutController;
-
-// TODO: Re-enable auth middleware once user permissions are implemented
-// Route::middleware('auth')->group(function () {
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
-Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
-Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
-// });
+// Checkout & Orders (auth only)
+Route::middleware(['auth'])->group(function () {
+    // In production, block admin checkout/order creation via middleware
+    Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('restrict_admin_checkout')->name('checkout.index');
+    Route::post('/orders', [OrderController::class, 'store'])->middleware('restrict_admin_checkout')->name('orders.store');
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+});
 
 // Admin reporting routes (sales dashboard, CSV/PDF export)
 Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
+    // Admin dashboard alias (for links expecting admin.dashboard)
+    Route::get('/dashboard', function () {
+        return redirect()->route('admin.sales');
+    })->name('admin.dashboard');
+
     Route::get('/sales', [ReportsController::class, 'index'])->name('admin.sales');
     Route::get('/sales/export/csv', [ReportsController::class, 'exportCsv'])->name('admin.sales.export.csv');
     Route::get('/sales/export/pdf', [ReportsController::class, 'exportPdf'])->name('admin.sales.export.pdf');

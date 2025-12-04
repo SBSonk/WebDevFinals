@@ -13,7 +13,7 @@ class RoleMiddleware
      * Handle an incoming request.
      * Expected parameter format: role:admin or role:admin,staff
      */
-    public function handle(Request $request, Closure $next, string $roles = null)
+    public function handle(Request $request, Closure $next, string ...$roles)
     {
         $user = Auth::user();
 
@@ -21,11 +21,18 @@ class RoleMiddleware
             return redirect()->route('login');
         }
 
-        if ($roles === null) {
+        if (empty($roles)) {
             return $next($request);
         }
 
-        $rolesArray = array_map('trim', explode(',', $roles));
+        // Laravel passes comma-separated params after the colon; if the middleware
+        // uses variadics, they'll already be split. If not, we may get a single
+        // item with commas — handle both.
+        if (count($roles) === 1 && str_contains($roles[0], ',')) {
+            $rolesArray = array_map('trim', explode(',', $roles[0]));
+        } else {
+            $rolesArray = array_map('trim', $roles);
+        }
 
         if (! $user->hasAnyRole($rolesArray)) {
             abort(403, 'Unauthorized.');

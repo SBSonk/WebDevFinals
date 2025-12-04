@@ -104,20 +104,55 @@ class OrderController extends Controller
             'status' => 'required|in:pending,completed,cancelled',
         ]);
 
+        $user = Auth::user();
         $order = Order::findOrFail($orderId);
-        $order->status = $request->input('status');
+
+        // Normalize property names (some code uses `status`, some `order_status`)
+        $currentStatus = $order->status ?? $order->order_status ?? null;
+        $newStatus = $request->input('status');
+
+        // Admins can update any status
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+
+        if (! $isAdmin) {
+            // Only allow the owner to cancel their own pending order
+            if ((int) $order->customer_id !== (int) ($user?->id)) {
+                abort(403, 'Unauthorized.');
+            }
+
+            if ($newStatus !== 'cancelled') {
+                abort(403, 'Only cancellation is allowed for customers.');
+            }
+
+            if ($currentStatus !== 'pending') {
+                abort(403, 'Only pending orders can be cancelled.');
+            }
+        }
+
+        // Apply the new status to whichever attribute exists
+        if (isset($order->status) || !isset($order->order_status)) {
+            $order->status = $newStatus;
+        } else {
+            $order->order_status = $newStatus;
+        }
         $order->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Order status updated successfully',
-            'status' => $order->status,
+            'status' => $newStatus,
         ]);
     }
 
     // Delete an order (admin only)
     public function destroy($orderId)
     {
+        $user = Auth::user();
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+        if (! $isAdmin) {
+            abort(403, 'Unauthorized. Admins only.');
+        }
+
         DB::beginTransaction();
         try {
             $order = Order::findOrFail($orderId);

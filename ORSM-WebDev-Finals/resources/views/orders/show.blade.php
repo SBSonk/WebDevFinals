@@ -3,8 +3,10 @@
 @section('content')
 {{-- TODO: Uncomment user permission check when implementing auth --}}
 @php
-    // $isAdmin = Auth::check() && Auth::user()->role === 'admin';
-    $isAdmin = true; // Default to admin view for testing
+    $user = auth()->user();
+    $isAdmin = auth()->check() && (method_exists($user, 'isAdmin') ? $user->isAdmin() : (isset($user->role) && strtolower((string) $user->role) === 'admin'));
+    $isOwner = auth()->check() && ((int) ($user->id) === (int) ($order->customer_id));
+    $__status = ($order->status ?? $order->order_status ?? 'pending');
 @endphp
 
 <div class="min-h-screen bg-gray-50">
@@ -27,27 +29,15 @@
                 <div>
                     <p class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Status</p>
                     <p class="mt-1">
-                        @if($isAdmin)
-                            <select name="status" class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold" onchange="updateOrderStatus(this.value)">
-                                <option value="pending" @selected($order->status == 'pending')>Pending</option>
-                                <option value="completed" @selected($order->status == 'completed')>Completed</option>
-                                <option value="cancelled" @selected($order->status == 'cancelled')>Cancelled</option>
-                            </select>
-                        @else
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
-                                @if($order->status == 'pending')
-                                    bg-yellow-100 text-yellow-800
-                                @elseif($order->status == 'completed')
-                                    bg-green-100 text-green-800
-                                @elseif($order->status == 'cancelled')
-                                    bg-red-100 text-red-800
-                                @else
-                                    bg-gray-100 text-gray-800
-                                @endif
-                            ">
-                                {{ ucfirst($order->status ?? 'pending') }}
-                            </span>
-                        @endif
+                        <select
+                            name="status"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold {{ $isAdmin ? '' : 'opacity-60 cursor-not-allowed bg-gray-100 text-gray-700' }}"
+                            @if($isAdmin) onchange="updateOrderStatus(this.value)" @else disabled aria-disabled="true" title="Status cannot be changed by your account" @endif
+                        >
+                            <option value="pending" @selected($__status == 'pending')>Pending</option>
+                            <option value="completed" @selected($__status == 'completed')>Completed</option>
+                            <option value="cancelled" @selected($__status == 'cancelled')>Cancelled</option>
+                        </select>
                     </p>
                 </div>
                 <div>
@@ -79,7 +69,7 @@
             <div class="px-6 py-4 bg-gray-100 border-b">
                 <h2 class="text-xl font-bold text-gray-900">Order Items</h2>
             </div>
-            
+
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-100 border-b">
@@ -129,16 +119,40 @@
                 <button onclick="deleteOrder({{ $order->order_id }})" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
                     Delete Order
                 </button>
+            @else
+                @if($isOwner && $__status === 'pending')
+                    <button onclick="cancelOrder({{ $order->order_id }})" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+                        Cancel Order
+                    </button>
+                @endif
             @endif
         </div>
     </div>
 </div>
 
-@if($isAdmin)
+@push('scripts')
 <script>
+function showToast(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `fixed inset-x-0 top-0 flex justify-center pt-4 z-50`;
+    alertDiv.innerHTML = `
+        <div class="px-6 py-3 rounded-lg text-white font-semibold shadow-lg ${
+            type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        }">
+            ${message}
+        </div>
+    `;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => {
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transition = 'opacity 0.3s ease-in-out';
+        setTimeout(() => alertDiv.remove(), 300);
+    }, 3000);
+}
+
+@if($isAdmin)
 function updateOrderStatus(newStatus) {
     const orderId = {{ $order->order_id }};
-    
     fetch(`/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
@@ -156,55 +170,52 @@ function updateOrderStatus(newStatus) {
             location.reload();
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
+    .catch(() => {
         showToast('Error updating status', 'error');
         location.reload();
     });
 }
 
 function deleteOrder(orderId) {
-    if (confirm('Are you sure you want to delete order #' + orderId + '? This action cannot be undone.')) {
-        fetch(`/orders/${orderId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Order deleted successfully', 'success');
-                setTimeout(() => window.location.href = '{{ route("orders.index") }}', 1500);
-            } else {
-                showToast('Failed to delete order', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error deleting order', 'error');
-        });
-    }
+    if (!confirm('Are you sure you want to delete order #' + orderId + '? This action cannot be undone.')) return;
+    fetch(`/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Order deleted successfully', 'success');
+            setTimeout(() => window.location.href = '{{ route('orders.index') }}', 1200);
+        } else {
+            showToast('Failed to delete order', 'error');
+        }
+    })
+    .catch(() => showToast('Error deleting order', 'error'));
 }
-
-function showToast(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `fixed inset-x-0 top-0 flex justify-center pt-4 z-50`;
-    alertDiv.innerHTML = `
-        <div class="px-6 py-3 rounded-lg text-white font-semibold shadow-lg ${
-            type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        }">
-            ${message}
-        </div>
-    `;
-    document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        alertDiv.style.opacity = '0';
-        alertDiv.style.transition = 'opacity 0.3s ease-in-out';
-        setTimeout(() => alertDiv.remove(), 300);
-    }, 3000);
+@else
+function cancelOrder(orderId) {
+    if (!confirm('Cancel order #' + orderId + '?')) return;
+    fetch(`/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data && data.success) {
+            showToast('Order cancelled.', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to cancel order.', 'error');
+        }
+    })
+    .catch(() => showToast('Error cancelling order.', 'error'));
 }
-</script>
 @endif
+</script>
+@endpush
 @endsection

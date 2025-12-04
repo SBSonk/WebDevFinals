@@ -8,8 +8,11 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
-Route::resource('products', ProductController::class);
-Route::resource('inventory', InventoryController::class);
-Route::resource('suppliers', SupplierController::class);
-Route::resource('categories', CategoryController::class);
-Route::resource('inventory_transactions', InventoryTransactionController::class);
+// Management routes are restricted to managers and admins
+Route::middleware(['auth', 'role:manager,admin'])->group(function () {
+    Route::resource('products', ProductController::class);
+    Route::resource('inventory', InventoryController::class);
+    Route::resource('suppliers', SupplierController::class);
+    Route::resource('categories', CategoryController::class);
+    Route::resource('inventory_transactions', InventoryTransactionController::class);
+});

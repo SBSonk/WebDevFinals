@@ -19,8 +19,13 @@ class EnsureUserIsAdmin
             return redirect()->route('login');
         }
 
-        // Check common admin markers without assuming DB schema
-        if (!empty($user->is_admin) || (isset($user->role) && $user->role === 'admin')) {
+        // Prefer model helper if available (case-insensitive via User::hasRole)
+        if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return $next($request);
+        }
+
+        // Check common admin markers without assuming DB schema (case-insensitive)
+        if (!empty($user->is_admin) || (isset($user->role) && strtolower((string)$user->role) === 'admin')) {
             return $next($request);
         }
 

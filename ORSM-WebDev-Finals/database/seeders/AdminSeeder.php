@@ -17,7 +17,7 @@ class AdminSeeder extends Seeder
         $adminEmail = env('ADMIN_EMAIL', 'admin@example.com');
         $adminPassword = env('ADMIN_PASSWORD', 'password123');
 
-        User::firstOrCreate(
+        $user = User::firstOrCreate(
             ['email' => $adminEmail],
             [
                 'name' => 'Administrator',
@@ -25,5 +25,11 @@ class AdminSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
+
+        // Ensure the existing admin user has the correct role even if it was created earlier
+        if (strtolower((string)($user->role)) !== 'admin') {
+            $user->role = 'admin';
+            $user->save();
+        }
     }
 }

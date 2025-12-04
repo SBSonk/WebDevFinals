@@ -54,7 +54,9 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
-        return $this->role === $role;
+        // Normalize to lowercase to avoid case-sensitivity issues (e.g., 'Admin' vs 'admin')
+        $userRole = $this->role ?? '';
+        return strtolower((string) $userRole) === strtolower($role);
     }
 
     /**
@@ -64,11 +66,11 @@ class User extends Authenticatable
      */
     public function hasAnyRole(array $roles): bool
     {
-        return in_array($this->role, $roles, true);
+        $userRole = strtolower((string) ($this->role ?? ''));
+        $normalized = array_map(static fn ($r) => strtolower((string) $r), $roles);
+        return in_array($userRole, $normalized, true);
     }
-}
-     * Relationship with ActivityLogs
-     */
+
     public function activityLogs()
     {
         return $this->hasMany(\App\Models\ActivityLog::class);
@@ -87,7 +89,7 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 
     /**
@@ -95,7 +97,7 @@ class User extends Authenticatable
      */
     public function isManager(): bool
     {
-        return $this->role === 'manager';
+        return $this->hasRole('manager');
     }
 
     /**
@@ -103,6 +105,6 @@ class User extends Authenticatable
      */
     public function isCustomer(): bool
     {
-        return $this->role === 'customer';
+        return $this->hasRole('customer');
     }
-};
+}

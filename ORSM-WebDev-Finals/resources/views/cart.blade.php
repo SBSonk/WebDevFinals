@@ -63,7 +63,12 @@
                 </div>
                 <div class="flex gap-4">
                     <a href="{{ route('store') }}" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors text-center">Continue Shopping</a>
-                    <a href="{{ route('checkout.index') }}" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-center">Proceed to Checkout</a>
+                    @php($user = auth()->user())
+                    @if(auth()->check() && method_exists($user, 'isAdmin') && $user->isAdmin())
+                        <a href="{{ route('admin.sales') }}" class="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-center">Sales Dashboard</a>
+                    @else
+                        <a href="{{ route('checkout.index') }}" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-center">Proceed to Checkout</a>
+                    @endif
                 </div>
             </div>
         @else

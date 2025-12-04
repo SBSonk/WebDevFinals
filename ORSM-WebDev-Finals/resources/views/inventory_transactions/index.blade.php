@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Inventory Transactions')
+@section('title', 'Inventory Movements')
 
 @section('content')
 
-<h1 class="mb-4 text-2xl font-bold">Inventory Transactions</h1>
+<h1 class="mb-4 text-2xl font-bold">Inventory Movements</h1>
 
 <a href="{{ route('inventory_transactions.create') }}" class="inline-block px-4 py-2 mb-4 text-white bg-blue-500 rounded">
     Add Transaction
