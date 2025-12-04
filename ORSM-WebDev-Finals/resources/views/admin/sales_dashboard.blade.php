@@ -120,35 +120,48 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function(){
     const datasets = {
         daily: {
-            labels: {!! json_encode($daily->pluck('date')) !!},
-            data: {!! json_encode($daily->pluck('total')->map(function($v){ return (float) $v; })) !!}
+            labels: {!! json_encode($daily->pluck('date')->toArray()) !!},
+            data: {!! json_encode($daily->pluck('total')->map(function($v){ return (float) $v; })->toArray()) !!}
         },
         weekly: {
-            labels: {!! json_encode($weekly->pluck('period')) !!},
-            data: {!! json_encode($weekly->pluck('total')->map(function($v){ return (float) $v; })) !!}
+            labels: {!! json_encode($weekly->pluck('period')->toArray()) !!},
+            data: {!! json_encode($weekly->pluck('total')->map(function($v){ return (float) $v; })->toArray()) !!}
         },
         monthly: {
-            labels: {!! json_encode($monthly->pluck('period')) !!},
-            data: {!! json_encode($monthly->pluck('total')->map(function($v){ return (float) $v; })) !!}
+            labels: {!! json_encode($monthly->pluck('period')->toArray()) !!},
+            data: {!! json_encode($monthly->pluck('total')->map(function($v){ return (float) $v; })->toArray()) !!}
         }
     };
 
-    const categoryLabels = {!! json_encode($byCategory->pluck('category_name')) !!};
-    const categoryValues = {!! json_encode($byCategory->pluck('total')->map(function($v){ return (float) $v; })) !!};
+    const categoryLabels = {!! json_encode($byCategory->pluck('category_name')->toArray()) !!};
+    const categoryValues = {!! json_encode($byCategory->pluck('total')->map(function($v){ return (float) $v; })->toArray()) !!};
 
-    const ctx = document.getElementById('salesChart').getContext('2d');
-    const salesChart = new Chart(ctx, {
+    function initCharts() {
+        console.log('Chart global typeof:', typeof Chart);
+        if (typeof Chart === 'undefined') {
+            throw new Error('Chart.js not available');
+        }
+
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: datasets.daily.labels,
             datasets: [{ label: 'Sales', data: datasets.daily.data, backgroundColor: 'rgba(59,130,246,0.7)' }]
         },
-        options: { responsive: true, scales: { x: { ticks: { maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true } } }
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true } } }
     });
+
+        // Expose for debugging in browser console under unique names
+        window.__appDatasets = datasets;
+        window.__salesChartInstance = salesChart;
+        console.log('salesChart created', { labels: datasets.daily.labels.length, data: datasets.daily.data.length });
+    }
 
     document.getElementById('periodSelect').addEventListener('change', function(e){
         const period = e.target.value;
@@ -172,13 +185,10 @@
     updateMainExport();
     document.getElementById('periodSelect').addEventListener('change', updateMainExport);
 
-    // Category pie chart below the main area
-    const catCanvas = document.createElement('canvas');
-    catCanvas.id = 'categoryChart';
-    catCanvas.height = 160;
-    document.querySelector('.grid').appendChild(catCanvas);
-
-    new Chart(catCanvas.getContext('2d'), {
+    try {
+        // Category pie chart (uses the existing canvas in the markup)
+        const catCanvas = document.getElementById('categoryChart');
+        const categoryChart = new Chart(catCanvas.getContext('2d'), {
         type: 'pie',
         data: {
             labels: categoryLabels,
@@ -251,7 +261,37 @@
                     }
                     statusDiv.innerHTML = 'Queued. Batch: <code>' + data.batch + '</code>. Waiting...';
                     pollStatus(data.check_url, data.download_url, data.batch, statusDiv, asyncBtn);
-                })
+                    window.__categoryChartInstance = categoryChart;
+                    console.log('categoryChart created', { labels: categoryLabels.length, data: categoryValues.length });
+                } catch (err) {
+                    console.error('categoryChart init error', err);
+                }
+
+                // Ensure Chart.js is loaded; dynamically load if missing
+                if (typeof Chart === 'undefined') {
+                    console.log('Chart.js not found, loading CDN...');
+                    const s = document.createElement('script');
+                    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+                    s.onload = function() {
+                        try {
+                            initCharts();
+                        } catch (e) {
+                            console.error('initCharts after load failed', e);
+                        }
+                    };
+                    s.onerror = function(e) {
+                        console.error('Failed to load Chart.js', e);
+                    };
+                    document.head.appendChild(s);
+                } else {
+                    try {
+                        initCharts();
+                    } catch (e) {
+                        console.error('initCharts failed', e);
+                    }
+                }
+
+                }); // DOMContentLoaded
                 .catch(err => {
                     console.error(err);
                     statusDiv.textContent = 'Error queuing export';

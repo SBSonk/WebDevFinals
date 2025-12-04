@@ -8,8 +8,10 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Supplier;
+use App\Models\Inventory;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Utilities\ZipHelper;
 use Illuminate\Support\Facades\Cache;
@@ -26,65 +28,129 @@ class ReportsController extends Controller
         $category = $request->input('category_id');
         $supplier = $request->input('supplier_id');
 
+        // Determine which date/amount columns are available in this environment
+        $dateColExists = Schema::hasColumn('orders', 'order_date');
+        $amountColExists = Schema::hasColumn('orders', 'total_amount');
+        $dateCol = $dateColExists ? 'order_date' : 'created_at';
+
         // Daily totals between selected dates
-        $daily = Order::select(DB::raw("DATE(order_date) as date"), DB::raw('SUM(total_amount) as total'), DB::raw('COUNT(*) as orders_count'))
-            ->whereBetween('order_date', [$start, $end])
-            ->when($category, function ($q, $category) {
-                $q->whereHas('details.product', function ($q2) use ($category) {
-                    $q2->where('category_id', $category);
-                });
-            })
-            ->when($supplier, function ($q, $supplier) {
-                $q->whereHas('details.product', function ($q2) use ($supplier) {
-                    $q2->where('supplier_id', $supplier);
-                });
-            })
-            ->groupBy(DB::raw('DATE(order_date)'))
-            ->orderBy('date')
-            ->get();
+        if ($amountColExists) {
+            $daily = Order::select(DB::raw("DATE({$dateCol}) as date"), DB::raw('SUM(total_amount) as total'), DB::raw('COUNT(*) as orders_count'))
+                ->whereBetween($dateCol, [$start, $end])
+                ->when($category, function ($q, $category) {
+                    $q->whereHas('details.product', function ($q2) use ($category) {
+                        $q2->where('category_id', $category);
+                    });
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->whereHas('details.product', function ($q2) use ($supplier) {
+                        $q2->where('supplier_id', $supplier);
+                    });
+                })
+                ->groupBy(DB::raw("DATE({$dateCol})"))
+                ->orderBy('date')
+                ->get();
+        } else {
+            // fallback: aggregate from order_details.subtotal when orders.total_amount is not available
+            $daily = DB::table('order_details')
+                ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+                ->whereBetween("orders.{$dateCol}", [$start, $end])
+                ->when($category, function ($q, $category) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.category_id', $category);
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.supplier_id', $supplier);
+                })
+                ->select(DB::raw("DATE(orders.{$dateCol}) as date"), DB::raw('SUM(order_details.subtotal) as total'), DB::raw('COUNT(DISTINCT orders.order_id) as orders_count'))
+                ->groupBy(DB::raw("DATE(orders.{$dateCol})"))
+                ->orderBy('date')
+                ->get();
+        }
 
         // Weekly totals
-        $weekly = DB::table('orders')
-            ->select(DB::raw("CONCAT(YEAR(order_date),'-',LPAD(WEEK(order_date,1),2,'0')) as period"), DB::raw('SUM(total_amount) as total'))
-            ->whereBetween('order_date', [$start, $end])
-            ->when($category, function ($q, $category) {
-                $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
-                    ->join('products', 'order_details.product_id', '=', 'products.product_id')
-                    ->where('products.category_id', $category);
-            })
-            ->when($supplier, function ($q, $supplier) {
-                $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
-                    ->join('products', 'order_details.product_id', '=', 'products.product_id')
-                    ->where('products.supplier_id', $supplier);
-            })
-            ->groupBy('period')
-            ->orderBy('period')
-            ->get();
+        if ($amountColExists) {
+            $weekly = DB::table('orders')
+                ->select(DB::raw("CONCAT(YEAR({$dateCol}),'-',LPAD(WEEK({$dateCol},1),2,'0')) as period"), DB::raw('SUM(total_amount) as total'))
+                ->whereBetween($dateCol, [$start, $end])
+
+                ->groupBy('period')
+                ->orderBy('period')
+                ->when($category, function ($q, $category) {
+                    $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
+                        ->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.category_id', $category);
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
+                        ->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.supplier_id', $supplier);
+                })
+                ->get();
+        } else {
+            $weekly = DB::table('order_details')
+                ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+                ->select(DB::raw("CONCAT(YEAR(orders.{$dateCol}),'-',LPAD(WEEK(orders.{$dateCol},1),2,'0')) as period"), DB::raw('SUM(order_details.subtotal) as total'))
+                ->whereBetween("orders.{$dateCol}", [$start, $end])
+                ->when($category, function ($q, $category) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.category_id', $category);
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.supplier_id', $supplier);
+                })
+                ->groupBy('period')
+                ->orderBy('period')
+                ->get();
+        }
 
         // Monthly totals
-        $monthly = DB::table('orders')
-            ->select(DB::raw("DATE_FORMAT(order_date, '%Y-%m') as period"), DB::raw('SUM(total_amount) as total'))
-            ->whereBetween('order_date', [$start, $end])
-            ->when($category, function ($q, $category) {
-                $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
-                    ->join('products', 'order_details.product_id', '=', 'products.product_id')
-                    ->where('products.category_id', $category);
-            })
-            ->when($supplier, function ($q, $supplier) {
-                $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
-                    ->join('products', 'order_details.product_id', '=', 'products.product_id')
-                    ->where('products.supplier_id', $supplier);
-            })
-            ->groupBy('period')
-            ->orderBy('period')
-            ->get();
+        if ($amountColExists) {
+            $monthly = DB::table('orders')
+                ->select(DB::raw("DATE_FORMAT({$dateCol}, '%Y-%m') as period"), DB::raw('SUM(total_amount) as total'))
+                ->whereBetween($dateCol, [$start, $end])
+                ->when($category, function ($q, $category) {
+                    $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
+                        ->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.category_id', $category);
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->join('order_details', 'orders.order_id', '=', 'order_details.order_id')
+                        ->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.supplier_id', $supplier);
+                })
+                ->groupBy('period')
+                ->orderBy('period')
+                ->get();
+        } else {
+            $monthly = DB::table('order_details')
+                ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+                ->select(DB::raw("DATE_FORMAT(orders.{$dateCol}, '%Y-%m') as period"), DB::raw('SUM(order_details.subtotal) as total'))
+                ->whereBetween("orders.{$dateCol}", [$start, $end])
+                ->when($category, function ($q, $category) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.category_id', $category);
+                })
+                ->when($supplier, function ($q, $supplier) {
+                    $q->join('products', 'order_details.product_id', '=', 'products.product_id')
+                        ->where('products.supplier_id', $supplier);
+                })
+                ->groupBy('period')
+                ->orderBy('period')
+                ->get();
+        }
 
         // Category breakdown (by subtotal)
+        // determine categories primary key name (some schemas use category_id)
+        $categoriesPk = Schema::hasColumn('categories', 'id') ? 'id' : (Schema::hasColumn('categories', 'category_id') ? 'category_id' : 'id');
+
         $byCategory = DB::table('order_details')
             ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
             ->join('products', 'order_details.product_id', '=', 'products.product_id')
-            ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->whereBetween('orders.order_date', [$start, $end])
+            ->join('categories', 'products.category_id', '=', DB::raw("categories.{$categoriesPk}"))
+            ->whereBetween("orders.{$dateCol}", [$start, $end])
             ->when($category, function ($q, $category) {
                 $q->where('products.category_id', $category);
             })
@@ -108,14 +174,27 @@ class ReportsController extends Controller
                     $q2->where('supplier_id', $supplier);
                 });
             })
-            ->orderBy('order_date', 'desc')
+            ->orderBy($dateCol, 'desc')
             ->paginate(15);
 
         $categories = Category::orderBy('category_name')->get();
         $suppliers = Supplier::orderBy('supplier_name')->get();
 
+        // Low stock alerts: inventory records where stock_quantity <= reorder_level
+        $lowStock = collect();
+        if (Schema::hasTable('inventory')) {
+            try {
+                $lowStock = Inventory::with('product')
+                    ->whereColumn('stock_quantity', '<=', 'reorder_level')
+                    ->get();
+            } catch (\Throwable $e) {
+                // keep lowStock empty if inventory table/columns not present
+                $lowStock = collect();
+            }
+        }
+
         // Use defensive calculation to avoid missing column errors
-        $grandTotalOrders = Order::whereBetween('order_date', [$start, $end])
+        $grandTotalOrders = Order::whereBetween($dateCol, [$start, $end])
             ->when($category, function ($q, $category) {
                 $q->whereHas('details.product', function ($q2) use ($category) {
                     $q2->where('category_id', $category);
@@ -127,11 +206,17 @@ class ReportsController extends Controller
                 });
             })
             ->get();
-        $grandTotal = $grandTotalOrders->sum(function ($o) {
-            return floatval($o->total_amount ?? 0);
+
+        $getOrderAmount = function ($o) use ($amountColExists) {
+            if ($amountColExists) return floatval($o->total_amount ?? 0);
+            return floatval(collect($o->details)->sum('subtotal') ?? 0);
+        };
+
+        $grandTotal = $grandTotalOrders->sum(function ($o) use ($getOrderAmount) {
+            return $getOrderAmount($o);
         });
 
-        return view('admin.sales_dashboard', compact('daily', 'weekly', 'monthly', 'byCategory', 'recentOrders', 'categories', 'suppliers', 'grandTotal', 'start', 'end', 'category', 'supplier'));
+        return view('admin.sales_dashboard', compact('daily', 'weekly', 'monthly', 'byCategory', 'recentOrders', 'categories', 'suppliers', 'lowStock', 'grandTotal', 'start', 'end', 'category', 'supplier'));
     }
 
     // CSV export handler

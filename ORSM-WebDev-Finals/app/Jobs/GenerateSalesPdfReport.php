@@ -70,6 +70,13 @@ class GenerateSalesPdfReport implements ShouldQueue
         $totalOrders = $ordersQuery->count();
         $hasAmountCol = $amountColExists;
 
+        \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::handle start', [
+            'batchId' => $this->batchId,
+            'dateRange' => "{$this->start} to {$this->end}",
+            'totalOrders' => $totalOrders,
+            'chunkSize' => $this->chunkSize,
+        ]);
+
         $part = 1;
         $buffer = [];
         $totalParts = (int) ceil($totalOrders / $this->chunkSize);
@@ -110,6 +117,12 @@ class GenerateSalesPdfReport implements ShouldQueue
                 ]);
                 $pdfPath = $tmpDir . DIRECTORY_SEPARATOR . ($this->batchId . '_part' . $part . '.pdf');
                 file_put_contents($pdfPath, $pdf->output());
+                \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::wrote PDF part', [
+                    'batchId' => $this->batchId,
+                    'part' => $part,
+                    'filePath' => $pdfPath,
+                    'fileSize' => filesize($pdfPath),
+                ]);
                 $part++;
                 $buffer = [];
             }
@@ -138,16 +151,40 @@ class GenerateSalesPdfReport implements ShouldQueue
             ]);
             $pdfPath = $tmpDir . DIRECTORY_SEPARATOR . ($this->batchId . '_part' . $part . '.pdf');
             file_put_contents($pdfPath, $pdf->output());
+            \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::wrote final PDF part', [
+                'batchId' => $this->batchId,
+                'part' => $part,
+                'filePath' => $pdfPath,
+                'fileSize' => filesize($pdfPath),
+            ]);
             $part++;
             $buffer = [];
         }
 
+        \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::PDF generation complete', [
+            'batchId' => $this->batchId,
+            'totalPartsWritten' => $part - 1,
+            'expectedParts' => $totalParts,
+        ]);
+
         $zipPath = $tmpRoot . DIRECTORY_SEPARATOR . ($this->batchId . '.zip');
         $files = glob($tmpDir . DIRECTORY_SEPARATOR . '*.pdf');
         if (!ZipHelper::create($zipPath, $files)) {
+            \Illuminate\Support\Facades\Log::error('GenerateSalesPdfReport::ZIP creation failed', [
+                'batchId' => $this->batchId,
+                'zipPath' => $zipPath,
+                'fileCount' => count($files),
+            ]);
             Cache::put('reports:' . $this->batchId, ['status' => 'failed'], 3600);
             return;
         }
+
+        \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::ZIP created successfully', [
+            'batchId' => $this->batchId,
+            'zipPath' => $zipPath,
+            'zipSize' => filesize($zipPath),
+            'fileCount' => count($files),
+        ]);
 
         // clean parts
         foreach ($files as $f) {
@@ -155,6 +192,10 @@ class GenerateSalesPdfReport implements ShouldQueue
         }
         @rmdir($tmpDir);
 
+        \Illuminate\Support\Facades\Log::info('GenerateSalesPdfReport::completed', [
+            'batchId' => $this->batchId,
+            'zipPath' => $zipPath,
+        ]);
         Cache::put('reports:' . $this->batchId, ['status' => 'ready', 'path' => $zipPath], 86400);
     }
 }

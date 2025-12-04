@@ -23,6 +23,7 @@ require __DIR__ . '/products_inventory_management.php';
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\PaymentController;
 
 // Store & Cart
 Route::get('/store', [CartController::class, 'storeView'])->name('store');
@@ -51,4 +52,13 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->pref
     Route::get('/sales/export/pdf', [ReportsController::class, 'exportPdf'])->name('admin.sales.export.pdf');
     Route::get('/sales/export/check/{batch}', [ReportsController::class, 'exportCheck'])->name('admin.sales.export.check');
     Route::get('/sales/export/download/{batch}', [ReportsController::class, 'exportDownload'])->name('admin.sales.export.download');
+
+    // Payment simulation routes
+    Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
+    Route::post('/payments/{orderId}/simulate-cod', [PaymentController::class, 'simulateCod'])->name('admin.payments.simulate-cod');
+    Route::post('/payments/{orderId}/simulate-success', [PaymentController::class, 'simulatePaymentSuccess'])->name('admin.payments.simulate-success');
+    Route::post('/payments/{orderId}/simulate-failed', [PaymentController::class, 'simulatePaymentFailed'])->name('admin.payments.simulate-failed');
+    Route::post('/payments/bulk-update', [PaymentController::class, 'bulkUpdatePaymentStatus'])->name('admin.payments.bulk-update');
+    Route::get('/payments/stats', [PaymentController::class, 'paymentStats'])->name('admin.payments.stats');
+    Route::post('/payments/create-test', [PaymentController::class, 'createTestOrder'])->name('admin.payments.create-test');
 });
