@@ -91,8 +91,6 @@ class SystemSettings extends Model
             'shop_phone' => self::get('shop_phone', '+1-234-567-8900'),
             'shop_address' => self::get('shop_address', '123 Main St'),
             'shop_logo' => self::get('shop_logo', null),
-            'primary_color' => self::get('primary_color', '#3498db'),
-            'secondary_color' => self::get('secondary_color', '#2c3e50'),
             'currency' => self::get('currency', 'USD'),
             'tax_rate' => self::get('tax_rate', 0, 'number'),
         ];

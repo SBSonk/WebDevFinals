@@ -25,7 +25,7 @@ Then in the tinker REPL:
 ```php
 App\Models\User::create([
     'name' => 'Admin User',
-    'email' => 'admin@example.com',
+    'email' => 'test@example.com',
     'password' => bcrypt('password123'),
     'role' => 'admin',
     'is_active' => true,
@@ -47,7 +47,7 @@ class CreateAdminSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'test@example.com'],
             [
                 'name' => 'Admin User',
                 'password' => bcrypt('password123'),
@@ -86,7 +86,6 @@ php artisan db:seed --class=CreateAdminSeeder
 
 ### System Settings (`/admin/settings`)
 - Configure shop information (name, email, phone, address)
-- Set branding colors
 - Configure currency and tax rates
 - All changes are logged for audit purposes
 
@@ -120,7 +119,6 @@ use App\Models\SystemSettings;
 
 // Get settings
 $shopName = SystemSettings::get('shop_name');
-$primaryColor = SystemSettings::get('primary_color');
 
 // Set settings programmatically
 SystemSettings::set('maintenance_mode', true);

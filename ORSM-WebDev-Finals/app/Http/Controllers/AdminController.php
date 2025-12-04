@@ -243,8 +243,6 @@ class AdminController extends Controller
             'shop_email' => ['required', 'email'],
             'shop_phone' => ['required', 'string', 'max:20'],
             'shop_address' => ['required', 'string', 'max:500'],
-            'primary_color' => ['required', 'regex:/#[0-9A-F]{6}/i'],
-            'secondary_color' => ['required', 'regex:/#[0-9A-F]{6}/i'],
             'currency' => ['required', 'string', 'max:10'],
             'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);

@@ -204,7 +204,6 @@ $validated = $request->validate([
 $validated = $request->validate([
     'shop_name' => ['required', 'string', 'max:255'],
     'shop_email' => ['required', 'email'],
-    'primary_color' => ['required', 'regex:/#[0-9A-F]{6}/i'],
     'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
 ]);
 ```

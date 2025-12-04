@@ -83,34 +83,7 @@
                             </div>
                         </div>
 
-                        <!-- Branding Section -->
-                        <div class="mb-8 pb-8 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-6">Branding</h3>
-
-                            <!-- Primary Color -->
-                            <div class="mb-6">
-                                <label for="primary_color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Primary Color</label>
-                                <div class="flex items-center space-x-4">
-                                    <input type="color" id="primary_color" name="primary_color" value="{{ old('primary_color', $settings['primary_color']) }}" class="h-12 w-20 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer">
-                                    <input type="text" value="{{ old('primary_color', $settings['primary_color']) }}" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm" readonly>
-                                </div>
-                                @error('primary_color')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <!-- Secondary Color -->
-                            <div class="mb-6">
-                                <label for="secondary_color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Secondary Color</label>
-                                <div class="flex items-center space-x-4">
-                                    <input type="color" id="secondary_color" name="secondary_color" value="{{ old('secondary_color', $settings['secondary_color']) }}" class="h-12 w-20 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer">
-                                    <input type="text" value="{{ old('secondary_color', $settings['secondary_color']) }}" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm" readonly>
-                                </div>
-                                @error('secondary_color')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
+                        <!-- Branding removed -->
 
                         <!-- Financial Settings Section -->
                         <div class="mb-8">
@@ -156,17 +129,5 @@
         </div>
     </div>
 
-    <script>
-        // Sync color inputs and displays
-        const primaryColor = document.getElementById('primary_color');
-        const secondaryColor = document.getElementById('secondary_color');
-        
-        primaryColor.addEventListener('input', function() {
-            this.nextElementSibling.value = this.value;
-        });
-        
-        secondaryColor.addEventListener('input', function() {
-            this.nextElementSibling.value = this.value;
-        });
-    </script>
+    <!-- Branding removed: color pickers and sync script removed -->
 </x-app-layout>

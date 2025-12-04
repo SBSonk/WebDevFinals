@@ -169,7 +169,6 @@ SYSTEM_SETTINGS TABLE
 ├──────────────────────────────────────────┤
 │1 │shop_name    │"MyStore"│string  │...   │
 │2 │tax_rate     │15       │number  │...   │
-│3 │primary_color│#3498db  │string  │...   │
 └──────────────────────────────────────────┘
 ```
 

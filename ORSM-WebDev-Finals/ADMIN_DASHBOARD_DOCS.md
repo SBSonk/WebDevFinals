@@ -28,7 +28,6 @@ This module provides a complete Admin Dashboard and System Settings management s
 
 ### 3. System Settings
 - **Shop Information**: Configure store name, description, email, phone, and address
-- **Branding**: Set primary and secondary colors
 - **Financial Settings**: Configure currency and tax rates
 - **Settings Management**: Easy-to-use interface for updating system configuration
 
@@ -293,8 +292,6 @@ $logs = ActivityLog::byUser($userId)
 - **shop_name**: Required, string, max 255
 - **shop_email**: Required, valid email
 - **shop_phone**: Required, max 20 characters
-- **primary_color**: Required, valid hex color
-- **secondary_color**: Required, valid hex color
 - **currency**: Required, valid currency code
 - **tax_rate**: Optional, numeric, 0-100
 

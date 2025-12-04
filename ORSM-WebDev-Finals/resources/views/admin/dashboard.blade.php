@@ -4,6 +4,9 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 {{ __('Admin Dashboard') }}
             </h2>
+            <a href="{{ route('dashboard') }}" class="ml-4 inline-flex items-center px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-transparent rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                ← Back to Dashboard
+            </a>
         </div>
     </x-slot>
 

@@ -207,8 +207,7 @@ These views integrate with:
 ## Customization Guide
 
 ### Change Colors
-1. Update `primary_color` and `secondary_color` in settings
-2. Or modify Tailwind classes directly in views
+1. Color customization removed from settings. Modify Tailwind classes directly in views if needed.
 
 ### Add New Fields
 1. Add field to form in view
