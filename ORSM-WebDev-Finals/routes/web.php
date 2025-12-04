@@ -47,11 +47,19 @@ Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders
 
 // Admin reporting routes (sales dashboard, CSV/PDF export)
 Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
-    Route::get('/sales', [ReportsController::class, 'index'])->name('admin.sales');
-    Route::get('/sales/export/csv', [ReportsController::class, 'exportCsv'])->name('admin.sales.export.csv');
-    Route::get('/sales/export/pdf', [ReportsController::class, 'exportPdf'])->name('admin.sales.export.pdf');
-    Route::get('/sales/export/check/{batch}', [ReportsController::class, 'exportCheck'])->name('admin.sales.export.check');
-    Route::get('/sales/export/download/{batch}', [ReportsController::class, 'exportDownload'])->name('admin.sales.export.download');
+    // --- ADDED ADMIN REPORTING ROUTES ---
+    Route::prefix('reports')->group(function () {
+        Route::get('/', [ReportsController::class, 'index'])->name('admin.reports.dashboard');
+        Route::get('sales', [ReportsController::class, 'sales'])->name('admin.reports.sales');
+        Route::get('inventory', [ReportsController::class, 'inventory'])->name('admin.reports.inventory');
+        Route::get('performance', [ReportsController::class, 'productPerformance'])->name('admin.reports.productPerformance');
+        Route::get('movements', [ReportsController::class, 'inventoryMovements'])->name('admin.reports.inventoryMovements');
+
+        // Exports
+        Route::get('sales/export-csv', [ReportsController::class, 'exportSalesCSV'])->name('admin.reports.export.csv');
+        Route::get('sales/export-excel', [ReportsController::class, 'exportSalesExcel'])->name('admin.reports.export.excel');
+        Route::get('sales/export-pdf', [ReportsController::class, 'exportSalesPDF'])->name('admin.reports.export.pdf');
+    });
 
     // Payment simulation routes
     Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
