@@ -31,8 +31,6 @@
                 <a id="syncPdfExport"
                     href="{{ route('admin.sales.export.pdf', array_merge(request()->only(['start', 'end', 'category_id', 'supplier_id']))) }}"
                     class="px-3 py-1 text-white bg-gray-800 rounded">Export PDF</a>
-                <button id="asyncPdfExport" class="px-3 py-1 text-white bg-indigo-600 rounded">Async PDF</button>
-                <div id="asyncExportStatus" class="ml-3 text-sm"></div>
             </div>
         </div>
 
@@ -357,92 +355,6 @@
                         openModal();
                     });
                 });
-
-                // Async PDF export
-                (function () {
-                    const asyncBtn = document.getElementById('asyncPdfExport');
-                    const statusDiv = document.getElementById('asyncExportStatus');
-                    if (!asyncBtn) return;
-
-                    asyncBtn.addEventListener('click', function () {
-                        asyncBtn.disabled = true;
-                        statusDiv.textContent = 'Queueing export...';
-
-                        const params = new URLSearchParams(window.location.search);
-                        params.set('async', '1');
-                        const url = '{{ route('admin.sales.export.pdf') }}' + '?' + params.toString();
-
-                        fetch(url, {
-                            method: 'GET',
-                            credentials: 'same-origin',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
-                            }
-                        })
-                            .then(r => {
-                                if (!r.ok) throw new Error('Network response was not ok');
-                                return r.json();
-                            })
-                            .then(data => {
-                                if (!data.batch) {
-                                    statusDiv.textContent = 'Failed to queue export';
-                                    asyncBtn.disabled = false;
-                                    return;
-                                }
-                                statusDiv.innerHTML = 'Queued. Batch: <code>' + data.batch + '</code>. Waiting...';
-                                pollStatus(data.check_url, data.download_url, data.batch, statusDiv, asyncBtn);
-                            })
-                            .catch(err => {
-                                console.error(err);
-                                statusDiv.textContent = 'Error queuing export';
-                                asyncBtn.disabled = false;
-                            });
-                    });
-
-                    function pollStatus(checkUrl, downloadUrl, batch, statusDiv, button) {
-                        let attempts = 0;
-                        const maxAttempts = 120;
-                        const intv = setInterval(function () {
-                            attempts++;
-                            fetch(checkUrl, {
-                                credentials: 'same-origin',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'Accept': 'application/json'
-                                }
-                            })
-                                .then(r => {
-                                    if (!r.ok) throw new Error('Check request failed');
-                                    return r.json();
-                                })
-                                .then(d => {
-                                    if (!d || !d.status) return;
-                                    if (d.status === 'ready') {
-                                        clearInterval(intv);
-                                        statusDiv.innerHTML = '<a href="' + downloadUrl + '" class="px-2 py-1 text-white bg-green-600 rounded">Download ZIP</a> <span class="ml-2 text-xs text-gray-600">(batch ' + batch + ')</span>';
-                                        button.disabled = false;
-                                    } else if (d.status === 'failed') {
-                                        clearInterval(intv);
-                                        statusDiv.textContent = 'Export failed';
-                                        button.disabled = false;
-                                    } else {
-                                        // still queued/processing
-                                        statusDiv.textContent = 'Processing... (attempt ' + attempts + ')';
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error('poll error', err);
-                                    // keep trying; after many attempts give up
-                                    if (attempts > maxAttempts) {
-                                        clearInterval(intv);
-                                        statusDiv.textContent = 'Timed out waiting for export';
-                                        button.disabled = false;
-                                    }
-                                });
-                        }, 2000);
-                    }
-                })();
 
                 // Initialize charts
                 if (typeof Chart !== 'undefined') {

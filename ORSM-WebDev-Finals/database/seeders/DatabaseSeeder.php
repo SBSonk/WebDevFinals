@@ -39,8 +39,8 @@ class DatabaseSeeder extends Seeder
         // Create 5 suppliers
         Supplier::factory(5)->create();
 
-        //Create 20 orders
-        Order::factory(5)->create();
+        // //Create 20 orders
+        // Order::factory(5)->create();
 
         // Create inventory records for all products
         Product::all()->each(function ($product) {
@@ -53,6 +53,10 @@ class DatabaseSeeder extends Seeder
                 InventoryTransactionItem::factory()->count(3),
                 'items'
             )
+            ->create();
+
+        Inventory::factory()
+            ->count(10)
             ->create();
     }
 }

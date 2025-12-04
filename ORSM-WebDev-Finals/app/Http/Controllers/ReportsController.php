@@ -365,166 +365,142 @@ class ReportsController extends Controller
      * Export orders to PDF (requires barryvdh/laravel-dompdf)
      */
     public function exportPdf(Request $request)
-    {
-        $start = $request->input('start') ? Carbon::parse($request->input('start'))->startOfDay() : Carbon::now()->subMonth()->startOfDay();
-        $end = $request->input('end') ? Carbon::parse($request->input('end'))->endOfDay() : Carbon::now()->endOfDay();
+{
+    $start = $request->input('start') 
+        ? Carbon::parse($request->input('start'))->startOfDay() 
+        : Carbon::now()->subMonth()->startOfDay();
+    $end = $request->input('end') 
+        ? Carbon::parse($request->input('end'))->endOfDay() 
+        : Carbon::now()->endOfDay();
 
-        $category = $request->input('category_id');
-        $supplier = $request->input('supplier_id');
+    $category = $request->input('category_id');
+    $supplier = $request->input('supplier_id');
 
-        // Build a query so we can stream results in chunks for large exports
-        $ordersQuery = Order::with('customer', 'details.product')
-            ->whereBetween('order_date', [$start, $end])
-            ->when($category, function ($q, $category) {
-                $q->whereHas('details.product', function ($q2) use ($category) {
-                    $q2->where('category_id', $category);
-                });
-            })
-            ->when($supplier, function ($q, $supplier) {
-                $q->whereHas('details.product', function ($q2) use ($supplier) {
-                    $q2->where('supplier_id', $supplier);
-                });
-            })
-            ->orderBy('order_date');
+    $ordersQuery = Order::with('customer', 'details.product')
+        ->whereBetween('order_date', [$start, $end])
+        ->when($category, function ($q) use ($category) {
+            $q->whereHas('details.product', fn($q2) => $q2->where('category_id', $category));
+        })
+        ->when($supplier, function ($q) use ($supplier) {
+            $q->whereHas('details.product', fn($q2) => $q2->where('supplier_id', $supplier));
+        })
+        ->orderBy('order_date');
 
-        // Count matching orders (efficient enough)
-        $totalOrders = $ordersQuery->count();
+    $totalOrders = $ordersQuery->count();
+    $grandTotal = $ordersQuery->sum('total_amount');
 
-        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-            abort(500, 'PDF export requires the package barryvdh/laravel-dompdf. Run: composer require barryvdh/laravel-dompdf');
-        }
+    if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+        abort(500, 'PDF export requires barryvdh/laravel-dompdf. Run: composer require barryvdh/laravel-dompdf');
+    }
 
-        $categoryName = null;
-        $supplierName = null;
-        if ($category) {
-            $cat = Category::find($category);
-            $categoryName = $cat ? $cat->category_name : null;
-        }
-        if ($supplier) {
-            $sup = Supplier::find($supplier);
-            $supplierName = $sup ? $sup->supplier_name : null;
-        }
+    $categoryName = $category ? Category::find($category)?->category_name : null;
+    $supplierName = $supplier ? Supplier::find($supplier)?->supplier_name : null;
 
-        // We'll support chunked PDF generation for large exports to avoid memory issues.
-        $chunkSize = 200;
+    $makeSafe = fn($str) => $str ? preg_replace('/[^a-z0-9_\-]/', '', strtolower(str_replace(' ', '_', $str))) : '';
 
-        // compute grand total and keep totalOrders from earlier
-        $grandTotal = $ordersQuery->sum('total_amount');
+    $baseFilename = 'sales_' . $start->format('Ymd') . '_to_' . $end->format('Ymd');
+    if ($categoryName) $baseFilename .= '_cat_' . $makeSafe($categoryName);
+    elseif ($category) $baseFilename .= '_cat' . $category;
+    if ($supplierName) $baseFilename .= '_sup_' . $makeSafe($supplierName);
+    elseif ($supplier) $baseFilename .= '_sup' . $supplier;
 
-        // helper to sanitize filename parts
-        $makeSafe = function ($str) {
-            if (empty($str)) return '';
-            $s = strtolower($str);
-            $s = preg_replace('/\s+/', '_', $s);
-            $s = preg_replace('/[^a-z0-9_\-]/', '', $s);
-            return $s;
-        };
-        $catSafe = $makeSafe($categoryName);
-        $supSafe = $makeSafe($supplierName);
+    $chunkSize = 200;
 
-        $baseFilename = 'sales_' . $start->format('Ymd') . '_to_' . $end->format('Ymd');
-        if ($catSafe) $baseFilename .= '_cat_' . $catSafe;
-        elseif ($category) $baseFilename .= '_cat' . $category;
-        if ($supSafe) $baseFilename .= '_sup_' . $supSafe;
-        elseif ($supplier) $baseFilename .= '_sup' . $supplier;
+    if ($totalOrders <= $chunkSize) {
+        $orders = $ordersQuery->get();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.exports.sales_report', [
+            'orders' => $orders,
+            'start' => $start,
+            'end' => $end,
+            'category' => $category,
+            'supplier' => $supplier,
+            'categoryName' => $categoryName,
+            'supplierName' => $supplierName,
+            'totalOrders' => $orders->count(),
+            'grandTotal' => $orders->sum('total_amount'),
+            'partIndex' => 1,
+            'totalParts' => 1,
+            'overallTotalOrders' => $totalOrders,
+            'overallGrandTotal' => $grandTotal,
+        ]);
 
-        if ($totalOrders <= $chunkSize) {
-            // small export: render a single PDF
-            $orders = $ordersQuery->get();
-            $totalOrders = $orders->count();
+        return $pdf->download($baseFilename . '.pdf');
+    }
 
+    // Large export: create multiple PDFs and zip them synchronously
+    $tmpRoot = storage_path('app/reports');
+    if (!is_dir($tmpRoot)) mkdir($tmpRoot, 0755, true);
+
+    $batchId = uniqid('sales_');
+    $tmpDir = $tmpRoot . DIRECTORY_SEPARATOR . $batchId;
+    mkdir($tmpDir, 0755);
+
+    $totalParts = (int) ceil($totalOrders / $chunkSize);
+    $part = 1;
+    $buffer = [];
+
+    foreach ($ordersQuery->cursor() as $order) {
+        $buffer[] = $order;
+        if (count($buffer) >= $chunkSize) {
+            $ordersChunk = collect($buffer);
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.exports.sales_report', [
-                'orders' => $orders,
+                'orders' => $ordersChunk,
                 'start' => $start,
                 'end' => $end,
                 'category' => $category,
                 'supplier' => $supplier,
                 'categoryName' => $categoryName,
                 'supplierName' => $supplierName,
-                'totalOrders' => $totalOrders,
-                'grandTotal' => $grandTotal,
-                'partIndex' => 1,
-                'totalParts' => 1,
+                'totalOrders' => $ordersChunk->count(),
+                'grandTotal' => $ordersChunk->sum('total_amount'),
+                'partIndex' => $part,
+                'totalParts' => $totalParts,
                 'overallTotalOrders' => $totalOrders,
                 'overallGrandTotal' => $grandTotal,
             ]);
-
-            return $pdf->download($baseFilename . '.pdf');
+            $pdfPath = $tmpDir . DIRECTORY_SEPARATOR . ($batchId . '_part' . $part . '.pdf');
+            file_put_contents($pdfPath, $pdf->output());
+            $part++;
+            $buffer = [];
         }
-
-        // Large export: create multiple PDFs in a temp dir and zip them
-        $tmpRoot = storage_path('app/reports');
-        if (!is_dir($tmpRoot)) {
-            mkdir($tmpRoot, 0755, true);
-        }
-        $batchId = uniqid('sales_');
-        $tmpDir = $tmpRoot . DIRECTORY_SEPARATOR . $batchId;
-        mkdir($tmpDir, 0755);
-
-        $totalParts = (int) ceil($totalOrders / $chunkSize);
-        $part = 1;
-        $buffer = [];
-        foreach ($ordersQuery->cursor() as $order) {
-            $buffer[] = $order;
-            if (count($buffer) >= $chunkSize) {
-                $ordersChunk = collect($buffer);
-                $chunkTotal = $ordersChunk->sum('total_amount');
-                $chunkCount = $ordersChunk->count();
-                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.exports.sales_report', [
-                    'orders' => $ordersChunk,
-                    'start' => $start,
-                    'end' => $end,
-                    'category' => $category,
-                    'supplier' => $supplier,
-                    'categoryName' => $categoryName,
-                    'supplierName' => $supplierName,
-                    'totalOrders' => $chunkCount,
-                    'grandTotal' => $chunkTotal,
-                    'partIndex' => $part,
-                    'totalParts' => $totalParts,
-                    'overallTotalOrders' => $totalOrders,
-                    'overallGrandTotal' => $grandTotal,
-                ]);
-                $pdfPath = $tmpDir . DIRECTORY_SEPARATOR . ($batchId . '_part' . $part . '.pdf');
-                file_put_contents($pdfPath, $pdf->output());
-                $part++;
-                $buffer = [];
-            }
-        }
-
-        // For large exports we can optionally dispatch an async job if requested
-        if ($request->input('async')) {
-            $batchId = $batchId ?? uniqid('sales_');
-            // set cache marker
-            \Illuminate\Support\Facades\Cache::put('reports:' . $batchId, ['status' => 'queued'], 3600);
-            // dispatch job
-            \App\Jobs\GenerateSalesPdfReport::dispatch($batchId, $start, $end, $category, $supplier, $chunkSize);
-            return response()->json([
-                'status' => 'queued',
-                'batch' => $batchId,
-                'check_url' => route('admin.sales.export.check', ['batch' => $batchId]),
-                'download_url' => route('admin.sales.export.download', ['batch' => $batchId])
-            ]);
-        }
-
-        // create zip synchronously (fallback)
-        $zipPath = $tmpRoot . DIRECTORY_SEPARATOR . ($batchId . '.zip');
-        $files = glob($tmpDir . DIRECTORY_SEPARATOR . '*.pdf');
-        if (!ZipHelper::create($zipPath, $files)) {
-            abort(500, 'Unable to create zip archive for export');
-        }
-
-        // remove temporary pdf files and directory (keep zip)
-        foreach ($files as $f) {
-            if (is_file($f)) {
-                @unlink($f);
-            }
-        }
-        @rmdir($tmpDir);
-
-        // stream the zip and delete it after send
-        return response()->download($zipPath, $baseFilename . '.zip')->deleteFileAfterSend(true);
     }
+
+    // Handle remaining orders
+    if (count($buffer) > 0) {
+        $ordersChunk = collect($buffer);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.exports.sales_report', [
+            'orders' => $ordersChunk,
+            'start' => $start,
+            'end' => $end,
+            'category' => $category,
+            'supplier' => $supplier,
+            'categoryName' => $categoryName,
+            'supplierName' => $supplierName,
+            'totalOrders' => $ordersChunk->count(),
+            'grandTotal' => $ordersChunk->sum('total_amount'),
+            'partIndex' => $part,
+            'totalParts' => $totalParts,
+            'overallTotalOrders' => $totalOrders,
+            'overallGrandTotal' => $grandTotal,
+        ]);
+        $pdfPath = $tmpDir . DIRECTORY_SEPARATOR . ($batchId . '_part' . $part . '.pdf');
+        file_put_contents($pdfPath, $pdf->output());
+    }
+
+    // Zip the PDFs
+    $zipPath = $tmpRoot . DIRECTORY_SEPARATOR . ($batchId . '.zip');
+    $files = glob($tmpDir . DIRECTORY_SEPARATOR . '*.pdf');
+    if (!ZipHelper::create($zipPath, $files)) {
+        abort(500, 'Unable to create zip archive for export');
+    }
+
+    // Clean up temporary PDFs
+    foreach ($files as $f) @unlink($f);
+    @rmdir($tmpDir);
+
+    return response()->download($zipPath, $baseFilename . '.zip')->deleteFileAfterSend(true);
+}
+
 
     /**
      * Check async export status (returns cached status for a batch)
