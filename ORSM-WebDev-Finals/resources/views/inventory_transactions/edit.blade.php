@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Inventory Transaction')
+@section('title', 'Edit Inventory Movement')
 
 @section('content')
 <div class="container max-w-4xl p-6 mx-auto">
 
     <h1 class="pb-2 mb-8 text-3xl font-extrabold text-gray-800 border-b">
-        Editing Transaction #{{ $transaction->transaction_id }}
+        Editing Movement #{{ $transaction->transaction_id }}
     </h1>
 
     @if (session('error'))
@@ -20,11 +20,11 @@
         @csrf
         @method('PUT')
 
-        {{-- Transaction Details --}}
+        {{-- Movement Details --}}
         <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
-            {{-- Transaction Type (Input name matches Controller: 'type') --}}
+            {{-- Movement Type (Input name matches Controller: 'type') --}}
             <div>
-                <label for="transaction-type" class="block mb-2 text-sm font-bold text-gray-700">Transaction Type <span class="text-red-500">*</span></label>
+                <label for="transaction-type" class="block mb-2 text-sm font-bold text-gray-700">Movement Type <span class="text-red-500">*</span></label>
                 <select id="transaction-type" name="type" class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="" disabled>Select IN or OUT</option>
                     {{-- Pre-select existing value using old() for fallback or the transaction data --}}
@@ -37,11 +37,11 @@
             {{-- Reference Number --}}
             <div>
                 <label for="reference_number" class="block mb-2 text-sm font-bold text-gray-700">Reference Number (Optional)</label>
-                <input 
-                    type="text" 
-                    id="reference_number" 
-                    name="reference_number" 
-                    class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+                <input
+                    type="text"
+                    id="reference_number"
+                    name="reference_number"
+                    class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Invoice, PO, or Transfer number"
                     {{-- Pre-fill with existing data --}}
                     value="{{ old('reference_number', $transaction->reference_number) }}"
@@ -53,16 +53,16 @@
         {{-- Remarks --}}
         <div class="mb-8">
             <label for="remarks" class="block mb-2 text-sm font-bold text-gray-700">Remarks (Optional)</label>
-            <textarea 
-                id="remarks" 
-                name="remarks" 
-                rows="3" 
+            <textarea
+                id="remarks"
+                name="remarks"
+                rows="3"
                 class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Reason for stock movement (e.g., received damaged goods, sale to customer X)"
             >{{ old('remarks', $transaction->remarks) }}</textarea>
             @error('remarks')<p class="mt-1 text-xs italic text-red-500">{{ $message }}</p>@enderror
         </div>
-        
+
         <h2 class="pt-4 mb-4 text-xl font-semibold text-gray-700 border-t">Products Affected</h2>
 
         <div id="product-list">
@@ -70,7 +70,7 @@
                 // Use transaction items if not dealing with failed old submission data
                 $items = old('items') ? collect(old('items')) : $transaction->items;
             @endphp
-            
+
             @forelse ($items as $index => $item)
                 {{-- Ensure $item is treated as an object for consistency with Laravel relationships --}}
                 @php
@@ -88,9 +88,9 @@
                         @endforeach
                     </select>
 
-                    <input 
-                        type="number" 
-                        name="items[{{ $index }}][quantity]" 
+                    <input
+                        type="number"
+                        name="items[{{ $index }}][quantity]"
                         class="w-1/4 p-3 border rounded-lg quantity-input"
                         min="1"
                         placeholder="Qty"
@@ -98,7 +98,7 @@
                         value="{{ $quantity }}"
                     >
 
-                    <button 
+                    <button
                         type="button"
                         class="flex-shrink-0 p-2 text-white transition duration-150 bg-red-600 rounded-lg hover:bg-red-700 remove-row"
                         onclick="removeRow(this)"
@@ -129,8 +129,8 @@
             @endforelse
         </div>
 
-        <button 
-            type="button" 
+        <button
+            type="button"
             class="px-4 py-2 mb-8 text-sm font-semibold text-white transition duration-150 bg-green-500 rounded-lg shadow-md hover:bg-green-600"
             onclick="addRow()"
         >
@@ -169,16 +169,16 @@ function addRow() {
                 <option value="" disabled selected>Select product</option>
             </select>
 
-            <input 
-                type="number" 
-                name="items[${rowIndex}][quantity]" 
+            <input
+                type="number"
+                name="items[${rowIndex}][quantity]"
                 class="w-1/4 p-3 border rounded-lg quantity-input"
                 min="1"
                 placeholder="Qty"
                 required
             >
 
-            <button 
+            <button
                 type="button"
                 class="flex-shrink-0 p-2 text-white transition duration-150 bg-red-600 rounded-lg hover:bg-red-700 remove-row"
                 onclick="removeRow(this)"
@@ -190,13 +190,13 @@ function addRow() {
         </div>
     `;
     list.insertAdjacentHTML('beforeend', html);
-    
+
     // Populate options for the newly added row
     populateProductOptions(list.lastElementChild);
-    
+
     // Manually trigger the initial constraint update for the new row
     updateQuantityConstraints(list.lastElementChild);
-    
+
     rowIndex++;
 }
 
@@ -221,45 +221,45 @@ function removeRow(button) {
 function populateProductOptions(targetRow = null) {
     const type = document.getElementById('transaction-type').value;
     const rows = targetRow ? [targetRow] : document.querySelectorAll('.product-row');
-    
+
     rows.forEach(row => {
         const select = row.querySelector('.product-select');
         const currentValue = select.value;
-        
+
         // Save the currently selected option's data-stock if available
         let currentStockIfSelected = 0;
         if (select.selectedOptions.length > 0 && select.selectedOptions[0].dataset.stock) {
             currentStockIfSelected = parseInt(select.selectedOptions[0].dataset.stock);
         }
-        
+
         select.innerHTML = '<option value="" disabled selected>Select product</option>';
 
         let shouldKeepSelection = false;
 
         allProducts.forEach(p => {
-            // Special consideration for EDIT: If the product is currently selected and the transaction is 'out', 
+            // Special consideration for EDIT: If the product is currently selected and the transaction is 'out',
             // the stock used for constraint checking should be the current stock + the quantity currently in the input field.
-            // However, since the Controller handles the rollback/re-apply logic, the stock shown here should 
+            // However, since the Controller handles the rollback/re-apply logic, the stock shown here should
             // ideally represent the stock *after* the current transaction has been rolled back, but tracking that complex
-            // state in JS is overly complicated. 
-            // We stick to the simpler rule: only filter out products with 0 stock unless they are already selected 
+            // state in JS is overly complicated.
+            // We stick to the simpler rule: only filter out products with 0 stock unless they are already selected
             // in which case, we rely on the input constraint logic to adjust the max based on the current data.
-            
+
             // Filter rule: Only filter out products with 0 stock for 'Stock OUT' transactions if not already selected
             const isCurrentlySelected = p.id == currentValue;
-            if (type === 'out' && p.stock <= 0 && !isCurrentlySelected) return; 
-            
+            if (type === 'out' && p.stock <= 0 && !isCurrentlySelected) return;
+
             const option = document.createElement('option');
             option.value = p.id;
             option.dataset.stock = p.stock;
             option.text = `${p.name} (Stock: ${p.stock})`;
-            
+
             // Re-select the product if it's still available/valid
             if (isCurrentlySelected) {
                  option.selected = true;
                  shouldKeepSelection = true;
             }
-            
+
             select.appendChild(option);
         });
 
@@ -279,32 +279,32 @@ function updateQuantityConstraints(row) {
     const type = document.getElementById('transaction-type').value;
     const select = row.querySelector('.product-select');
     const qtyInput = row.querySelector('.quantity-input');
-    
+
     const selectedOption = select.selectedOptions[0];
     let actualStock = parseInt(selectedOption?.dataset.stock || 0);
     const currentValue = parseInt(qtyInput.value || 1);
-    
+
     // Clear any previous max attribute
     qtyInput.removeAttribute('max');
     qtyInput.value = currentValue; // Ensure value is not null
 
     if (type === 'out' && selectedOption) {
-        
+
         // This is complex editing logic. To avoid errors, the stock calculation should be:
         // Max Quantity = Current Stock (P) + Old Quantity (O) - New Quantity (N) must be >= 0
-        // Since we rolled back inventory in the Controller, the stock value fetched in the $products variable 
+        // Since we rolled back inventory in the Controller, the stock value fetched in the $products variable
         // is the current, actual stock.
-        
+
         // However, for the UI UX, we must check against the *effective* maximum after rollback.
         // Since the Controller handles the rollback and reapplies the new value, we should check:
         // Max allowed OUT quantity = Current Actual Stock + Quantity being used in THIS row (if it's the original item).
-        
-        // Simplification for UX: 
-        // We calculate the maximum allowable quantity for "OUT" as the currently known stock. 
+
+        // Simplification for UX:
+        // We calculate the maximum allowable quantity for "OUT" as the currently known stock.
         // The server-side rollback/re-add logic ensures the overall balance is correct.
-        
+
         qtyInput.max = actualStock;
-        
+
         // Ensure the current value doesn't exceed the new max
         if (currentValue > actualStock) {
             qtyInput.value = actualStock;
@@ -344,7 +344,7 @@ document.addEventListener('input', function(e) {
         const max = parseInt(e.target.max);
         const min = parseInt(e.target.min || 1);
         let value = parseInt(e.target.value);
-        
+
         if (value < min) {
             e.target.value = min;
         } else if (max && value > max) {
@@ -356,7 +356,7 @@ document.addEventListener('input', function(e) {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initial setup for existing rows
-    populateProductOptions(); 
+    populateProductOptions();
     updateAllQuantityConstraints();
 });
 

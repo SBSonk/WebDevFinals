@@ -17,10 +17,14 @@
 
         @if($orders->isEmpty())
             <div class="bg-white rounded-lg shadow-md p-12 text-center">
-                <p class="text-gray-600 text-lg mb-4">You haven't placed any orders yet.</p>
-                <a href="{{ route('store') }}" class="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-                    Continue Shopping
-                </a>
+                @if($isAdmin)
+                    <p class="text-gray-600 text-lg mb-4">No orders found in the system.</p>
+                @else
+                    <p class="text-gray-600 text-lg mb-4">You haven't placed any orders yet.</p>
+                    <a href="{{ route('store') }}" class="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
+                        Continue Shopping
+                    </a>
+                @endif
             </div>
         @else
             <div class="bg-white rounded-lg shadow-md overflow-hidden">

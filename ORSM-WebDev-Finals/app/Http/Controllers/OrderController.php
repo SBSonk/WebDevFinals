@@ -19,10 +19,22 @@ class OrderController extends Controller
         // If auth is not enforced (testing), fall back to dummy customer
         $user = Auth::user() ?? User::where('email', 'customer@example.com')->first();
 
-        // Return empty collection if no user found
-        $orders = $user
-            ? Order::where('customer_id', $user->id)->with('details.product')->orderBy('created_at', 'desc')->get()
-            : collect();
+        // Admins should see ALL orders; other users see only their own
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+
+        if ($isAdmin) {
+            $orders = Order::with(['details.product', 'customer'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Return empty collection if no user found
+            $orders = $user
+                ? Order::where('customer_id', $user->id)
+                    ->with(['details.product'])
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                : collect();
+        }
 
         return view('orders.index', compact('orders'));
     }

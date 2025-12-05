@@ -71,13 +71,18 @@ class InventoryTransactionController extends Controller
                     // This handles products that might not have an existing Inventory record yet.
                     $inventory = $product->inventory()->firstOrCreate(
                         ['product_id' => $product->product_id],
-                        ['stock_quantity' => 0] // Default stock if creating new record
+                        [
+                            'stock_quantity'   => 0,
+                            'reorder_level'    => 10,
+                            'max_stock_level'  => 100,
+                            'last_restocked'   => now(),
+                        ]
                     );
 
                     if ($transaction->transaction_type === 'in') {
                         $inventory->stock_quantity += $item['quantity'];
                     } else {
-                        // For 'out' transactions, the front-end should already prevent negative stock, 
+                        // For 'out' transactions, the front-end should already prevent negative stock,
                         // but you could add a final server-side check here if needed.
                         $inventory->stock_quantity -= $item['quantity'];
                     }
@@ -123,13 +128,18 @@ class InventoryTransactionController extends Controller
 
         try {
             DB::transaction(function () use ($transaction, $validated) {
-                
+
                 // === 1. Rollback previous inventory changes ===
                 foreach ($transaction->items as $item) {
                     // Use firstOrCreate to ensure inventory exists before rollback
                     $inventory = $item->product->inventory()->firstOrCreate(
                         ['product_id' => $item->product_id],
-                        ['stock_quantity' => 0]
+                        [
+                            'stock_quantity'   => 0,
+                            'reorder_level'    => 10,
+                            'max_stock_level'  => 100,
+                            'last_restocked'   => now(),
+                        ]
                     );
 
                     if ($transaction->transaction_type === 'in') {
@@ -160,13 +170,18 @@ class InventoryTransactionController extends Controller
                     ]);
 
                     $product = Product::find($item['product_id']);
-                    
+
                     // Use firstOrCreate again to ensure the inventory record exists for the new item
                     $inventory = $product->inventory()->firstOrCreate(
                         ['product_id' => $product->product_id],
-                        ['stock_quantity' => 0]
+                        [
+                            'stock_quantity'   => 0,
+                            'reorder_level'    => 10,
+                            'max_stock_level'  => 100,
+                            'last_restocked'   => now(),
+                        ]
                     );
-                    
+
                     if ($transaction->transaction_type === 'in') {
                         $inventory->stock_quantity += $item['quantity'];
                     } else {

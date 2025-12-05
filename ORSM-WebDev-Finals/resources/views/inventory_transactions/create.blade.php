@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Inventory Transaction')
+@section('title', 'Inventory Movement')
 
 @section('content')
 <div class="container max-w-4xl p-6 mx-auto">
 
-    <h1 class="pb-2 mb-8 text-3xl font-extrabold text-gray-800 border-b">Inventory IN / OUT Transaction</h1>
+    <h1 class="pb-2 mb-8 text-3xl font-extrabold text-gray-800 border-b">Inventory IN / OUT Movement</h1>
 
     @if (session('error'))
         <div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
@@ -16,11 +16,11 @@
     <form id="transaction-form" action="{{ route('inventory_transactions.store') }}" method="POST" class="p-6 bg-white rounded-lg shadow-xl">
         @csrf
 
-        {{-- Transaction Details --}}
+        {{-- Movement Details --}}
         <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
-            {{-- Transaction Type (Input name matches Controller: 'type') --}}
+            {{-- Movement Type (Input name matches Controller: 'type') --}}
             <div>
-                <label for="transaction-type" class="block mb-2 text-sm font-bold text-gray-700">Transaction Type <span class="text-red-500">*</span></label>
+                <label for="transaction-type" class="block mb-2 text-sm font-bold text-gray-700">Movement Type <span class="text-red-500">*</span></label>
                 <select id="transaction-type" name="type" class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="" disabled selected>Select IN or OUT</option>
                     <option value="in" {{ old('type') === 'in' ? 'selected' : '' }}>Stock IN (Add)</option>
@@ -32,11 +32,11 @@
             {{-- Reference Number --}}
             <div>
                 <label for="reference_number" class="block mb-2 text-sm font-bold text-gray-700">Reference Number (Optional)</label>
-                <input 
-                    type="text" 
-                    id="reference_number" 
-                    name="reference_number" 
-                    class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+                <input
+                    type="text"
+                    id="reference_number"
+                    name="reference_number"
+                    class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Invoice, PO, or Transfer number"
                     value="{{ old('reference_number') }}"
                 >
@@ -47,16 +47,16 @@
         {{-- Remarks --}}
         <div class="mb-8">
             <label for="remarks" class="block mb-2 text-sm font-bold text-gray-700">Remarks (Optional)</label>
-            <textarea 
-                id="remarks" 
-                name="remarks" 
-                rows="3" 
+            <textarea
+                id="remarks"
+                name="remarks"
+                rows="3"
                 class="w-full p-3 transition duration-150 ease-in-out border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Reason for stock movement (e.g., received damaged goods, sale to customer X)"
             >{{ old('remarks') }}</textarea>
             @error('remarks')<p class="mt-1 text-xs italic text-red-500">{{ $message }}</p>@enderror
         </div>
-        
+
         <h2 class="pt-4 mb-4 text-xl font-semibold text-gray-700 border-t">Products Affected</h2>
 
         <div id="product-list">
@@ -72,9 +72,9 @@
                     @endforeach
                 </select>
 
-                <input 
-                    type="number" 
-                    name="items[0][quantity]" 
+                <input
+                    type="number"
+                    name="items[0][quantity]"
                     class="w-1/4 p-3 border rounded-lg quantity-input"
                     min="1"
                     placeholder="Qty"
@@ -82,7 +82,7 @@
                     value="{{ old('items.0.quantity') }}"
                 >
 
-                <button 
+                <button
                     type="button"
                     class="flex-shrink-0 p-2 text-white transition duration-150 bg-red-600 rounded-lg hover:bg-red-700 remove-row"
                     onclick="removeRow(this)"
@@ -94,8 +94,8 @@
             </div>
         </div>
 
-        <button 
-            type="button" 
+        <button
+            type="button"
             class="px-4 py-2 mb-8 text-sm font-semibold text-white transition duration-150 bg-green-500 rounded-lg shadow-md hover:bg-green-600"
             onclick="addRow()"
         >
@@ -107,7 +107,7 @@
             type="submit"
             class="w-full px-6 py-3 mt-4 text-lg font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-150 ease-in-out shadow-lg transform hover:scale-[1.01]"
         >
-            Submit Inventory Transaction
+            Submit Inventory Movement
         </button>
     </form>
 </div>
@@ -133,16 +133,16 @@ function addRow() {
                 <option value="" disabled selected>Select product</option>
             </select>
 
-            <input 
-                type="number" 
-                name="items[${rowIndex}][quantity]" 
+            <input
+                type="number"
+                name="items[${rowIndex}][quantity]"
                 class="w-1/4 p-3 border rounded-lg quantity-input"
                 min="1"
                 placeholder="Qty"
                 required
             >
 
-            <button 
+            <button
                 type="button"
                 class="flex-shrink-0 p-2 text-white transition duration-150 bg-red-600 rounded-lg hover:bg-red-700 remove-row"
                 onclick="removeRow(this)"
@@ -154,13 +154,13 @@ function addRow() {
         </div>
     `;
     list.insertAdjacentHTML('beforeend', html);
-    
+
     // Populate options for the newly added row
     populateProductOptions(list.lastElementChild);
-    
+
     // Manually trigger the initial constraint update for the new row
     updateQuantityConstraints(list.lastElementChild);
-    
+
     rowIndex++;
 }
 
@@ -185,30 +185,30 @@ function removeRow(button) {
 function populateProductOptions(targetRow = null) {
     const type = document.getElementById('transaction-type').value;
     const rows = targetRow ? [targetRow] : document.querySelectorAll('.product-row');
-    
+
     rows.forEach(row => {
         const select = row.querySelector('.product-select');
         const currentValue = select.value;
-        
+
         select.innerHTML = '<option value="" disabled selected>Select product</option>';
 
         let shouldKeepSelection = false;
 
         allProducts.forEach(p => {
             // Filter out products with 0 stock for 'Stock OUT' transactions
-            if (type === 'out' && p.stock <= 0) return; 
-            
+            if (type === 'out' && p.stock <= 0) return;
+
             const option = document.createElement('option');
             option.value = p.id;
             option.dataset.stock = p.stock;
             option.text = `${p.name} (Stock: ${p.stock})`;
-            
+
             // Re-select the product if it's still available/valid
             if (p.id == currentValue) {
                  option.selected = true;
                  shouldKeepSelection = true;
             }
-            
+
             select.appendChild(option);
         });
 
@@ -227,10 +227,10 @@ function updateQuantityConstraints(row) {
     const type = document.getElementById('transaction-type').value;
     const select = row.querySelector('.product-select');
     const qtyInput = row.querySelector('.quantity-input');
-    
+
     const selectedOption = select.selectedOptions[0];
     const stock = parseInt(selectedOption?.dataset.stock || 0);
-    
+
     // Clear any previous max attribute
     qtyInput.removeAttribute('max');
     qtyInput.value = qtyInput.value || 1; // Ensure a default value of at least 1
@@ -238,7 +238,7 @@ function updateQuantityConstraints(row) {
     if (type === 'out' && selectedOption) {
         // For 'Stock OUT', limit quantity to the current stock
         qtyInput.max = stock;
-        
+
         // Also ensure the current value doesn't exceed the new max
         if (parseInt(qtyInput.value) > stock) {
             qtyInput.value = stock;
@@ -281,7 +281,7 @@ document.addEventListener('input', function(e) {
         const max = parseInt(e.target.max);
         const min = parseInt(e.target.min || 1);
         let value = parseInt(e.target.value);
-        
+
         if (value < min) {
             e.target.value = min;
         } else if (max && value > max) {
@@ -293,7 +293,7 @@ document.addEventListener('input', function(e) {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initial setup for existing rows (useful for old() values on form submission failure)
-    populateProductOptions(); 
+    populateProductOptions();
     updateAllQuantityConstraints();
 });
 

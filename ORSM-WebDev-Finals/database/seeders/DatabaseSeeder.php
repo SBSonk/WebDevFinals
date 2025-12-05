@@ -23,35 +23,57 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // ---- Users ----
+        // Default customer for quick testing
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
 
-        // Create admin user
+        // Admin user
         $this->call(\Database\Seeders\AdminSeeder::class);
-    
-    // Create 5 categories
-    Category::factory(5)->create();
 
-        // TODO: Remove this dummy customer once testing is done
+        // Another customer convenience account
         User::factory()->create([
             'name' => 'Dummy Customer',
             'email' => 'customer@example.com',
         ]);
 
-        // Create 5 suppliers
+        // ---- Catalog ----
+        // Categories & Suppliers
+        Category::factory(5)->create();
         Supplier::factory(5)->create();
 
-        // //Create 20 orders
-        // Order::factory(5)->create();
+        // Create a fixed number of products linked to existing categories/suppliers
+        // so that we can create a 1:1 inventory row per product.
+        $productCount = 20;
+        \App\Models\Product::factory()
+            ->count($productCount)
+            ->state(function (array $attributes) {
+                // Attach to existing category/supplier to avoid creating extras
+                $categoryId = Category::inRandomOrder()->value('category_id');
+                $supplierId = Supplier::inRandomOrder()->value('supplier_id');
+                return [
+                    'category_id' => $categoryId,
+                    'supplier_id' => $supplierId,
+                ];
+            })
+            ->create();
 
-        // Create inventory records for all products
+        // Ensure exactly one inventory record per product (no extras)
         Product::all()->each(function ($product) {
-            Inventory::factory()->create(['product_id' => $product->product_id]);
+            Inventory::firstOrCreate(
+                ['product_id' => $product->product_id],
+                [
+                    'stock_quantity' => rand(5, 50),
+                    'reorder_level' => 10,
+                    'max_stock_level' => 100,
+                    'last_restocked' => now(),
+                ]
+            );
         });
 
+        // ---- Inventory Movements (sample data) ----
         InventoryTransaction::factory()
             ->count(5)
             ->has(
@@ -60,8 +82,7 @@ class DatabaseSeeder extends Seeder
             )
             ->create();
 
-        Inventory::factory()
-            ->count(10)
-            ->create();
+        // ---- Orders ----
+        $this->call(\Database\Seeders\OrdersSeeder::class);
     }
 }

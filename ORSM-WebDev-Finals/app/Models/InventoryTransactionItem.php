@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class InventoryTransactionItem extends Model
 {
     use HasFactory;
-    
+
     protected $primaryKey = 'item_id';
 
     protected $fillable = [
@@ -24,6 +24,7 @@ class InventoryTransactionItem extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id');
+        // Include soft-deleted products so historical transactions still show names
+        return $this->belongsTo(Product::class, 'product_id')->withTrashed();
     }
 }

@@ -25,6 +25,7 @@ class OrderDetail extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+        // Include soft-deleted products so historical orders still show product names
+        return $this->belongsTo(Product::class, 'product_id', 'product_id')->withTrashed();
     }
 }

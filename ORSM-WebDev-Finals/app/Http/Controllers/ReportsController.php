@@ -151,9 +151,8 @@ class ReportsController extends Controller
             ->join('products', 'order_details.product_id', '=', 'products.product_id')
             ->join('categories', 'products.category_id', '=', DB::raw("categories.{$categoriesPk}"))
             ->whereBetween("orders.{$dateCol}", [$start, $end])
-            ->when($category, function ($q, $category) {
-                $q->where('products.category_id', $category);
-            })
+            // IMPORTANT: Do not apply the category filter here so the pie shows
+            // the full breakdown across all categories for the selected period.
             ->when($supplier, function ($q, $supplier) {
                 $q->where('products.supplier_id', $supplier);
             })
@@ -247,7 +246,46 @@ class ReportsController extends Controller
             $supSafe = $makeSafe($s ? $s->supplier_name : '');
         }
 
-        if ($aggregate === 'period') {
+        // Export: aggregate by category (ignore category filter intentionally)
+        if ($aggregate === 'category') {
+            // Determine pk/columns
+            $categoriesPk = Schema::hasColumn('categories', 'id') ? 'id' : (Schema::hasColumn('categories', 'category_id') ? 'category_id' : 'id');
+            $dateColExists = Schema::hasColumn('orders', 'order_date');
+            $dateCol = $dateColExists ? 'order_date' : 'created_at';
+
+            $rows = DB::table('order_details')
+                ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+                ->join('products', 'order_details.product_id', '=', 'products.product_id')
+                ->join('categories', 'products.category_id', '=', DB::raw("categories.{$categoriesPk}"))
+                ->whereBetween("orders.{$dateCol}", [$start, $end])
+                // Do NOT apply category filter here; we want full breakdown across categories
+                ->when($supplier, function ($q) use ($supplier) {
+                    $q->where('products.supplier_id', $supplier);
+                })
+                ->select('categories.category_name', DB::raw('SUM(order_details.subtotal) as total'))
+                ->groupBy('categories.category_name')
+                ->orderBy('total', 'desc')
+                ->get();
+
+            $fileName = 'sales_by_category_' . $start->format('Ymd') . '_to_' . $end->format('Ymd');
+            if ($supSafe) $fileName .= '_sup_' . $supSafe;
+            $fileName .= '.csv';
+
+            $response = new StreamedResponse(function () use ($rows) {
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, ['Category', 'Total']);
+                foreach ($rows as $r) {
+                    fputcsv($handle, [$r->category_name, $r->total]);
+                }
+                fclose($handle);
+            }, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+
+            return $response;
+
+        } elseif ($aggregate === 'period') {
             if ($period === 'weekly') {
                 $rows = DB::table('order_details')
                     ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
@@ -366,11 +404,11 @@ class ReportsController extends Controller
      */
     public function exportPdf(Request $request)
 {
-    $start = $request->input('start') 
-        ? Carbon::parse($request->input('start'))->startOfDay() 
+    $start = $request->input('start')
+        ? Carbon::parse($request->input('start'))->startOfDay()
         : Carbon::now()->subMonth()->startOfDay();
-    $end = $request->input('end') 
-        ? Carbon::parse($request->input('end'))->endOfDay() 
+    $end = $request->input('end')
+        ? Carbon::parse($request->input('end'))->endOfDay()
         : Carbon::now()->endOfDay();
 
     $category = $request->input('category_id');
